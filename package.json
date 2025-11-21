@@ -1,0 +1,16 @@
+{
+  "name": "coins-app",
+  "version": "1.0.0",
+  "description": "A Pen created on CodePen.",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "parcel src/index.html --open",
+    "build": "parcel build src/index.html --dist-dir dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "parcel": "^2.16.1"
+  }
+}
