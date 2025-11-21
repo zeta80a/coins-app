@@ -76,55 +76,70 @@ function drawGrid() {
   ctx.lineWidth = 1;
   ctx.setLineDash([5, 5]);
 
-  // 座標範囲
-  const xMin = Math.floor(-params.offsetX / zoom);
-  const xMax = Math.ceil((canvas.width - params.offsetX) / zoom);
-  const yMin = Math.floor(-params.offsetY / zoom);
-  const yMax = Math.ceil((canvas.height - params.offsetY) / zoom);
-
+  // バッチで縦線を描画（複数の短いパスをまとめて stroke することで高速化）
+  const pxStartX = -50;
+  const pxEndX = canvas.width + 50;
+  const worldXStart = Math.ceil((pxStartX - params.offsetX) / zoom);
+  const worldXEnd = Math.floor((pxEndX - params.offsetX) / zoom);
   ctx.beginPath();
-
-  // 縦線（x方向グリッド）
-  for (let x = xMin; x <= xMax; x++) {
-    const px = params.offsetX + x * zoom;
+  for (let wx = worldXStart; wx <= worldXEnd; wx++) {
+    const px = Math.round(params.offsetX + wx * zoom) + 0.5;
     ctx.moveTo(px, 0);
     ctx.lineTo(px, canvas.height);
   }
+  ctx.stroke();
 
-  // 横線（y方向グリッド）
-  for (let y = yMin; y <= yMax; y++) {
-    const py = params.offsetY - y * zoom;
+  // 横線をバッチ描画
+  const pyStartY = -50;
+  const pyEndY = canvas.height + 50;
+  const worldYStart = Math.ceil((params.offsetY - pyEndY) / zoom);
+  const worldYEnd = Math.floor((params.offsetY - pyStartY) / zoom);
+  ctx.beginPath();
+  for (let wy = worldYStart; wy <= worldYEnd; wy++) {
+    const py = Math.round(params.offsetY - wy * zoom) + 0.5;
     ctx.moveTo(0, py);
     ctx.lineTo(canvas.width, py);
   }
-
   ctx.stroke();
+
   ctx.setLineDash([]);
 
   // ======================
-  // ラベル描画
+  // ラベル描画（既存ロジックを維持しつつ、描画範囲を狭める）
   ctx.fillStyle = "black";
   ctx.font = "12px sans-serif";
 
   // xラベル
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  const xStep = Math.max(
-    1,
-    Math.ceil((ctx.measureText("0000").width + 6) / zoom)
-  );
-  for (let x = Math.ceil(xMin / xStep) * xStep; x <= xMax; x += xStep) {
-    const px = params.offsetX + x * zoom;
-    ctx.fillText(x, px, params.offsetY + 2);
+  const approxLabelWidth = ctx.measureText("0000").width + 6;
+  const xStep = Math.max(1, Math.ceil(approxLabelWidth / zoom));
+  let labelY = Math.round(params.offsetY + 2);
+  labelY = Math.max(2, Math.min(canvas.height - 12, labelY));
+  const xLabelStart =
+    Math.ceil((pxStartX - params.offsetX) / zoom / xStep) * xStep;
+  const xLabelEnd =
+    Math.floor((pxEndX - params.offsetX) / zoom / xStep) * xStep;
+  for (let x = xLabelStart; x <= xLabelEnd; x += xStep) {
+    const px = Math.round(params.offsetX + x * zoom);
+    if (px >= -50 && px <= canvas.width + 50) ctx.fillText(x, px, labelY);
   }
 
   // yラベル
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   const yStep = Math.max(1, Math.ceil((12 + 4) / zoom));
-  for (let y = Math.ceil(yMin / yStep) * yStep; y <= yMax; y += yStep) {
-    const py = params.offsetY - y * zoom;
-    if (py >= 0 && py <= canvas.height) ctx.fillText(y, params.offsetX - 2, py);
+  let labelX = Math.round(params.offsetX - 4);
+  labelX = Math.max(4, Math.min(canvas.width - 4, labelX));
+  const yLabelStart =
+    Math.ceil((params.offsetY - pyEndY) / zoom / yStep) * yStep;
+  const yLabelEnd =
+    Math.floor((params.offsetY - pyStartY) / zoom / yStep) * yStep;
+  for (let y = yLabelStart; y <= yLabelEnd; y += yStep) {
+    const py = Math.round(params.offsetY - y * zoom);
+    if (py >= -50 && py <= canvas.height + 50) {
+      ctx.fillText(y, labelX, py);
+    }
   }
 }
 
@@ -143,14 +158,19 @@ function drawLine(f, color = "red") {
   ctx.strokeStyle = color;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let px = 0, started = false; px <= canvas.width; px++) {
-    const x = (px - params.offsetX) / zoom,
-      y = f(x),
-      py = params.offsetY - y * zoom;
+  // ピクセル単位の全走査は重いので、ズームに合わせて間引き（zoom >=1 -> step=1px, zoom<1 -> step>1）
+  const step = Math.max(1, Math.round(1 / Math.max(zoom, 0.0001)));
+  let started = false;
+  for (let px = 0; px <= canvas.width; px += step) {
+    const x = (px - params.offsetX) / zoom;
+    const y = f(x);
+    const py = params.offsetY - y * zoom;
     if (!started) {
       ctx.moveTo(px, py);
       started = true;
-    } else ctx.lineTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
   }
   ctx.stroke();
 }
@@ -188,8 +208,12 @@ function drawIntersections() {
       if (!l1.show || !l2.show) continue;
       let x, y;
       if (l1.type === "y" && l2.type === "y") {
+        // 表示されている範囲内だけを探索して交点を探す（粗探索）。
+        const xMin = Math.floor(-params.offsetX / zoom);
+        const xMax = Math.ceil((canvas.width - params.offsetX) / zoom);
         let found = false;
-        for (let xi = -1000; xi <= 1000; xi += 0.1) {
+        const step = 0.5; // 十分小さければほとんどの場合見つかる
+        for (let xi = xMin; xi <= xMax; xi += step) {
           if (Math.abs(l1.f(xi) - l2.f(xi)) < 1e-6) {
             x = xi;
             y = l1.f(xi);
