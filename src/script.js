@@ -129,8 +129,8 @@ function drawGrid() {
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   const yStep = Math.max(1, Math.ceil((12 + 4) / zoom));
-  let labelX = Math.round(params.offsetX - 4);
-  labelX = Math.max(4, Math.min(canvas.width - 4, labelX));
+  const axisProposedX = Math.round(params.offsetX - 4);
+  const padding = 4;
   const yLabelStart =
     Math.ceil((params.offsetY - pyEndY) / zoom / yStep) * yStep;
   const yLabelEnd =
@@ -138,7 +138,15 @@ function drawGrid() {
   for (let y = yLabelStart; y <= yLabelEnd; y += yStep) {
     const py = Math.round(params.offsetY - y * zoom);
     if (py >= -50 && py <= canvas.height + 50) {
-      ctx.fillText(y, labelX, py);
+      const txt = String(y);
+      const w = ctx.measureText(txt).width;
+      // 右寄せで描画するので、右端 (drawX) を軸位置にするが
+      // 左側がキャンバス外に出ないようにテキスト幅に基づき最小位置を決める
+      const drawX = Math.min(
+        Math.max(axisProposedX, Math.ceil(w) + padding),
+        canvas.width - padding
+      );
+      ctx.fillText(txt, drawX, py);
     }
   }
 }
