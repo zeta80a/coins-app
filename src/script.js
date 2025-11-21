@@ -321,13 +321,31 @@ document.getElementById("chkX").addEventListener("change", (e) => {
   draw();
 });
 
-["zoomInput", "offsetXInput", "offsetYInput"].forEach((id) => {
-  document.getElementById(id).addEventListener("input", (e) => {
-    if (id === "zoomInput") {
-      zoom = Number(e.target.value) / 100;
-      params.zoomPercent = Number(e.target.value);
-    } else if (id === "offsetXInput") params.offsetX = Number(e.target.value);
-    else params.offsetY = Number(e.target.value);
+// 入力ハンドラをマップ化して明示的に処理する（可読性と堅牢性向上）
+const inputHandlers = {
+  zoomInput: (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return;
+    zoom = n / 100;
+    params.zoomPercent = n;
+  },
+  offsetXInput: (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return;
+    params.offsetX = n;
+  },
+  offsetYInput: (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return;
+    params.offsetY = n;
+  },
+};
+
+Object.keys(inputHandlers).forEach((id) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("input", (e) => {
+    inputHandlers[id](e.target.value);
     draw();
   });
 });
