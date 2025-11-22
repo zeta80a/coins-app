@@ -356,8 +356,8 @@ class CanvasWrapper extends HTMLElement {
 
     const resultText =
       alpha && delta
-        ? `解集合の格子の個数=${Math.round((alpha.x + 1) * (delta.y + 1))}`
-        : "解集合の格子の個数= -";
+        ? `解集合の格子点の個数=${Math.round((alpha.x + 1) * (delta.y + 1))}`
+        : "解集合の格子点の個数= -";
 
     const panel = document.getElementById("panel");
     if (panel) {
@@ -382,14 +382,14 @@ class CanvasWrapper extends HTMLElement {
         panel.updateD(dText);
       }
       if (panel.updateTrapezoid) {
-        let trapText = "台形の格子の個数= -";
+        let trapText = "台形の格子点の個数= -";
         if (h_val !== null && D_val !== null && alpha && delta) {
           const h = h_val;
           const D = D_val;
           // (delta.y - h + 1) * [ (5 * (delta.y + h) - 2 * (D - alpha.x)) / 2 ]
           const term2 = (5 * (delta.y + h) - 2 * (D - alpha.x)) / 2;
           const val = (delta.y - h + 1) * term2;
-          trapText = `台形の格子の個数=${Math.round(val)}`;
+          trapText = `台形の格子点の個数=${Math.round(val)}`;
         }
         panel.updateTrapezoid(trapText);
       }
