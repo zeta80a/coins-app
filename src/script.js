@@ -447,6 +447,15 @@ class CanvasWrapper extends HTMLElement {
           }
           panel.updateLD(ldText);
         }
+
+        if (panel.updateLowerD) {
+          // d = max(-1, floor((X - C + 1) / 2) - 1)
+          const val = Math.max(
+            -1,
+            Math.floor((params.X - params.C + 1) / 2) - 1
+          );
+          panel.updateLowerD(`d=${val}`);
+        }
       }
     }
   }
@@ -517,6 +526,22 @@ class ControlPanel extends HTMLElement {
           display: block;
         }
         #resultContent {
+          display: block;
+        }
+        #ldPanelWrapper {
+          position: fixed;
+          top: 200px;
+          right: 10px;
+          z-index: 9999;
+          background: rgba(255, 255, 255, 0.95);
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          font-family: sans-serif;
+          display: block;
+        }
+        #ldContent {
           display: block;
         }
       </style>
@@ -594,6 +619,12 @@ class ControlPanel extends HTMLElement {
           <div id="ldResult" style="margin-top: 5px; font-weight: bold; color: blue;"></div>
         </div>
       </div>
+      <div id="ldPanelWrapper">
+        <button id="toggleLd">L_d</button>
+        <div id="ldContent">
+          <div id="lowerDResult" style="margin-top: 10px; font-weight: bold"></div>
+        </div>
+      </div>
     `;
   }
 
@@ -610,6 +641,13 @@ class ControlPanel extends HTMLElement {
     // Toggle Result
     shadow.getElementById("toggleResult").addEventListener("click", () => {
       const content = shadow.getElementById("resultContent");
+      content.style.display =
+        content.style.display === "none" ? "block" : "none";
+    });
+
+    // Toggle L_d
+    shadow.getElementById("toggleLd").addEventListener("click", () => {
+      const content = shadow.getElementById("ldContent");
       content.style.display =
         content.style.display === "none" ? "block" : "none";
     });
@@ -750,6 +788,11 @@ class ControlPanel extends HTMLElement {
 
   updateHD(text) {
     const el = this.shadowRoot.getElementById("HDResult");
+    if (el) el.textContent = text;
+  }
+
+  updateLowerD(text) {
+    const el = this.shadowRoot.getElementById("lowerDResult");
     if (el) el.textContent = text;
   }
 }
