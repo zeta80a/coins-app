@@ -336,6 +336,11 @@ class CanvasWrapper extends HTMLElement {
           (l1.name === "b0" && l2.name === "a1")
         )
           label = "β";
+        else if (
+          (l1.name === "a1" && l2.name === "c1") ||
+          (l1.name === "c1" && l2.name === "a1")
+        )
+          label = "ξ";
         if (label) ctx.fillText(label, px + 10, py - 10);
       }
     }
@@ -419,8 +424,8 @@ class ControlPanel extends HTMLElement {
         </div>
         <div>
           <label>X <input type="checkbox" id="chkX" checked /></label>
-          <input type="range" id="rangeX" min="1" max="400" value="120" />
-          <input type="number" id="numX" min="1" max="400" value="120" />
+          <input type="range" id="rangeX" min="1" max="150" value="120" />
+          <input type="number" id="numX" min="1" max="150" value="120" />
         </div>
         <div>
           Zoom(%):
