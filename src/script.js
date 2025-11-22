@@ -399,6 +399,7 @@ class CanvasWrapper extends HTMLElement {
         if (D_val !== null) {
           const H = Math.min(params.A, Math.floor(D_val / 5));
           HText = `H=${H}`;
+          this.drawLine((x) => H, "cyan");
         }
         panel.updateH_Big(HText);
       }
