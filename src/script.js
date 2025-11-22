@@ -349,6 +349,11 @@ class CanvasWrapper extends HTMLElement {
           // label = "β"; // Removed
           label = "ξ";
           xi = { x, y };
+        } else if (
+          (l1.name === "c0" && l2.name === "a1") ||
+          (l1.name === "a1" && l2.name === "c0")
+        ) {
+          label = "η";
         }
         if (label) ctx.fillText(label, px + 10, py - 10);
       }
