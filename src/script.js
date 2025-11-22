@@ -364,15 +364,19 @@ class CanvasWrapper extends HTMLElement {
       if (panel.updateResult) {
         panel.updateResult(resultText);
       }
+      const D_val = xi
+        ? Math.min(5 * params.A + params.B, Math.floor(xi.x))
+        : null;
+
       if (panel.updateH) {
         const hText =
-          alpha && xi ? `h=${Math.floor((xi.x - alpha.x + 5) / 5)}` : "h= -";
+          alpha && D_val !== null
+            ? `h=${Math.floor((D_val - alpha.x + 5) / 5)}`
+            : "h= -";
         panel.updateH(hText);
       }
       if (panel.updateD) {
-        const dText = xi
-          ? `D=${Math.min(5 * params.A + params.B, Math.floor(xi.x))}`
-          : "D= -";
+        const dText = D_val !== null ? `D=${D_val}` : "D= -";
         panel.updateD(dText);
       }
     }
@@ -432,32 +436,56 @@ class ControlPanel extends HTMLElement {
       <button id="toggleGui">pannel</button>
       <div id="guiContent">
         <div>
-          <label>A <input type="checkbox" id="chkA" checked /></label>
-          <input type="range" id="rangeA" min="0" max="50" value="25" />
-          <input type="number" id="numA" min="0" max="50" value="25" />
+          <label>A <input type="checkbox" id="chkA" ${
+            params.showA ? "checked" : ""
+          } /></label>
+          <input type="range" id="rangeA" min="0" max="50" value="${
+            params.A
+          }" />
+          <input type="number" id="numA" min="0" max="50" value="${params.A}" />
         </div>
         <div>
-          <label>B <input type="checkbox" id="chkB" checked /></label>
-          <input type="range" id="rangeB" min="0" max="50" value="40" />
-          <input type="number" id="numB" min="0" max="50" value="40" />
+          <label>B <input type="checkbox" id="chkB" ${
+            params.showB ? "checked" : ""
+          } /></label>
+          <input type="range" id="rangeB" min="0" max="50" value="${
+            params.B
+          }" />
+          <input type="number" id="numB" min="0" max="50" value="${params.B}" />
         </div>
         <div>
-          <label>C <input type="checkbox" id="chkC" checked /></label>
-          <input type="range" id="rangeC" min="0" max="50" value="50" />
-          <input type="number" id="numC" min="0" max="50" value="50" />
+          <label>C <input type="checkbox" id="chkC" ${
+            params.showC ? "checked" : ""
+          } /></label>
+          <input type="range" id="rangeC" min="0" max="50" value="${
+            params.C
+          }" />
+          <input type="number" id="numC" min="0" max="50" value="${params.C}" />
         </div>
         <div>
-          <label>X <input type="checkbox" id="chkX" checked /></label>
-          <input type="range" id="rangeX" min="1" max="150" value="120" />
-          <input type="number" id="numX" min="1" max="150" value="120" />
+          <label>X <input type="checkbox" id="chkX" ${
+            params.showC1 ? "checked" : ""
+          } /></label>
+          <input type="range" id="rangeX" min="1" max="150" value="${
+            params.X
+          }" />
+          <input type="number" id="numX" min="1" max="150" value="${
+            params.X
+          }" />
         </div>
         <div>
           Zoom(%):
-          <input type="number" id="zoomInput" value="870" min="10" max="1000" />
+          <input type="number" id="zoomInput" value="${
+            params.zoomPercent
+          }" min="10" max="1000" />
         </div>
-        <div>OffsetX: <input type="number" id="offsetXInput" value="86" /></div>
+        <div>OffsetX: <input type="number" id="offsetXInput" value="${
+          params.offsetX
+        }" /></div>
         <div>
-          OffsetY: <input type="number" id="offsetYInput" value="249" />
+          OffsetY: <input type="number" id="offsetYInput" value="${
+            params.offsetY
+          }" />
         </div>
         <div id="calcResult" style="margin-top: 10px; font-weight: bold"></div>
         <div id="hResult" style="margin-top: 5px; font-weight: bold"></div>
@@ -560,6 +588,29 @@ class ControlPanel extends HTMLElement {
     if (zoomInput) zoomInput.value = params.zoomPercent;
     if (offsetXInput) offsetXInput.value = Math.round(params.offsetX);
     if (offsetYInput) offsetYInput.value = Math.round(params.offsetY);
+
+    const updateField = (id, val) => {
+      const el = shadow.getElementById(id);
+      if (el) el.value = val;
+    };
+
+    updateField("rangeA", params.A);
+    updateField("numA", params.A);
+    updateField("rangeB", params.B);
+    updateField("numB", params.B);
+    updateField("rangeC", params.C);
+    updateField("numC", params.C);
+    updateField("rangeX", params.X);
+    updateField("numX", params.X);
+
+    const updateCheck = (id, val) => {
+      const el = shadow.getElementById(id);
+      if (el) el.checked = val;
+    };
+    updateCheck("chkA", params.showA);
+    updateCheck("chkB", params.showB);
+    updateCheck("chkC", params.showC);
+    updateCheck("chkX", params.showC1);
   }
 
   updateResult(text) {
