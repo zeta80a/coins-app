@@ -469,6 +469,9 @@ class ControlPanel extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          display: block;
+        }
+        #mainPanelWrapper {
           position: fixed;
           top: 10px;
           left: 10px;
@@ -479,7 +482,6 @@ class ControlPanel extends HTMLElement {
           border-radius: 6px;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
           font-family: sans-serif;
-          display: block;
         }
         label {
           display: inline-flex;
@@ -494,69 +496,98 @@ class ControlPanel extends HTMLElement {
           margin-left: 6px;
         }
         #guiContent {
+          display: none;
+        }
+        #resultPanelWrapper {
+          position: fixed;
+          top: 10px;
+          right: 10px;
+          z-index: 9999;
+          background: rgba(255, 255, 255, 0.95);
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          font-family: sans-serif;
+          display: block;
+        }
+        #resultContent {
           display: block;
         }
       </style>
-      <button id="toggleGui">pannel</button>
-      <div id="guiContent">
-        <div>
-          <label>A <input type="checkbox" id="chkA" ${
-            params.showA ? "checked" : ""
-          } /></label>
-          <input type="range" id="rangeA" min="0" max="50" value="${
-            params.A
-          }" />
-          <input type="number" id="numA" min="0" max="50" value="${params.A}" />
+      <div id="mainPanelWrapper">
+        <button id="toggleGui">pannel</button>
+        <div id="guiContent" style="display: none">
+          <div>
+            <label>A <input type="checkbox" id="chkA" ${
+              params.showA ? "checked" : ""
+            } /></label>
+            <input type="range" id="rangeA" min="0" max="50" value="${
+              params.A
+            }" />
+            <input type="number" id="numA" min="0" max="50" value="${
+              params.A
+            }" />
+          </div>
+          <div>
+            <label>B <input type="checkbox" id="chkB" ${
+              params.showB ? "checked" : ""
+            } /></label>
+            <input type="range" id="rangeB" min="0" max="50" value="${
+              params.B
+            }" />
+            <input type="number" id="numB" min="0" max="50" value="${
+              params.B
+            }" />
+          </div>
+          <div>
+            <label>C <input type="checkbox" id="chkC" ${
+              params.showC ? "checked" : ""
+            } /></label>
+            <input type="range" id="rangeC" min="0" max="50" value="${
+              params.C
+            }" />
+            <input type="number" id="numC" min="0" max="50" value="${
+              params.C
+            }" />
+          </div>
+          <div>
+            <label>X <input type="checkbox" id="chkX" ${
+              params.showC1 ? "checked" : ""
+            } /></label>
+            <input type="range" id="rangeX" min="1" max="150" value="${
+              params.X
+            }" />
+            <input type="number" id="numX" min="1" max="150" value="${
+              params.X
+            }" />
+          </div>
+          <div>
+            Zoom(%):
+            <input type="number" id="zoomInput" value="${
+              params.zoomPercent
+            }" min="10" max="1000" />
+          </div>
+          <div>OffsetX: <input type="number" id="offsetXInput" value="${
+            params.offsetX
+          }" /></div>
+          <div>
+            OffsetY: <input type="number" id="offsetYInput" value="${
+              params.offsetY
+            }" />
+          </div>
         </div>
-        <div>
-          <label>B <input type="checkbox" id="chkB" ${
-            params.showB ? "checked" : ""
-          } /></label>
-          <input type="range" id="rangeB" min="0" max="50" value="${
-            params.B
-          }" />
-          <input type="number" id="numB" min="0" max="50" value="${params.B}" />
+      </div>
+      <div id="resultPanelWrapper">
+        <button id="toggleResult">results</button>
+        <div id="resultContent">
+          <div id="dResult" style="margin-top: 10px; font-weight: bold"></div>
+          <div id="HDResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="hDResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="calcResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="trapezoidResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="ldResult" style="margin-top: 5px; font-weight: bold; color: blue;"></div>
         </div>
-        <div>
-          <label>C <input type="checkbox" id="chkC" ${
-            params.showC ? "checked" : ""
-          } /></label>
-          <input type="range" id="rangeC" min="0" max="50" value="${
-            params.C
-          }" />
-          <input type="number" id="numC" min="0" max="50" value="${params.C}" />
-        </div>
-        <div>
-          <label>X <input type="checkbox" id="chkX" ${
-            params.showC1 ? "checked" : ""
-          } /></label>
-          <input type="range" id="rangeX" min="1" max="150" value="${
-            params.X
-          }" />
-          <input type="number" id="numX" min="1" max="150" value="${
-            params.X
-          }" />
-        </div>
-        <div>
-          Zoom(%):
-          <input type="number" id="zoomInput" value="${
-            params.zoomPercent
-          }" min="10" max="1000" />
-        </div>
-        <div>OffsetX: <input type="number" id="offsetXInput" value="${
-          params.offsetX
-        }" /></div>
-        <div>
-          OffsetY: <input type="number" id="offsetYInput" value="${
-            params.offsetY
-          }" />
-        </div>
-        <div id="dResult" style="margin-top: 10px; font-weight: bold"></div>
-        <div id="HDResult" style="margin-top: 5px; font-weight: bold"></div>
-        <div id="hDResult" style="margin-top: 5px; font-weight: bold"></div>
-        <div id="calcResult" style="margin-top: 5px; font-weight: bold"></div>
-        <div id="trapezoidResult" style="margin-top: 5px; font-weight: bold"></div>
-        <div id="ldResult" style="margin-top: 5px; font-weight: bold; color: blue;"></div>
       </div>
     `;
   }
@@ -567,6 +598,13 @@ class ControlPanel extends HTMLElement {
     // Toggle GUI
     shadow.getElementById("toggleGui").addEventListener("click", () => {
       const content = shadow.getElementById("guiContent");
+      content.style.display =
+        content.style.display === "none" ? "block" : "none";
+    });
+
+    // Toggle Result
+    shadow.getElementById("toggleResult").addEventListener("click", () => {
+      const content = shadow.getElementById("resultContent");
       content.style.display =
         content.style.display === "none" ? "block" : "none";
     });
