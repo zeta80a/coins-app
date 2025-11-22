@@ -39,3 +39,6 @@ Thumbs.db
 *.tgz
 /.pnp
 .pnp.js
+
+## Evidence / test artifacts
+evidence/
