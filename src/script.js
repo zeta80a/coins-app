@@ -336,17 +336,17 @@ class CanvasWrapper extends HTMLElement {
           (l1.name === "a1" && l2.name === "b1") ||
           (l1.name === "b1" && l2.name === "a1")
         ) {
-          label = "δ";
-          delta = { x, y };
+          // label = "δ"; // Removed
+          // delta = { x, y }; // Removed
         } else if (
           (l1.name === "a1" && l2.name === "b0") ||
           (l1.name === "b0" && l2.name === "a1")
-        )
-          label = "β";
+        );
         else if (
           (l1.name === "a1" && l2.name === "c1") ||
           (l1.name === "c1" && l2.name === "a1")
         ) {
+          // label = "β"; // Removed
           label = "ξ";
           xi = { x, y };
         }
@@ -354,23 +354,17 @@ class CanvasWrapper extends HTMLElement {
       }
     }
 
-    const resultText =
-      alpha && delta
-        ? `解集合の格子点の個数=${Math.round((alpha.x + 1) * (delta.y + 1))}`
-        : "解集合の格子点の個数= -";
+    // Moved result calculation to after H calculation
 
     const panel = document.getElementById("panel");
     if (panel) {
-      if (panel.updateResult) {
-        panel.updateResult(resultText);
-      }
       const D_val = xi
         ? Math.min(5 * params.A + params.B, Math.floor(xi.x))
         : null;
 
       let h_val = null;
       if (alpha && D_val !== null) {
-        h_val = Math.floor((D_val - alpha.x + 5) / 5);
+        h_val = Math.max(0, Math.floor((D_val - alpha.x + 5) / 5));
       }
 
       if (panel.updateH) {
@@ -381,18 +375,6 @@ class CanvasWrapper extends HTMLElement {
         const dText = D_val !== null ? `D=${D_val}` : "D= -";
         panel.updateD(dText);
       }
-      if (panel.updateTrapezoid) {
-        let trapText = "台形の格子点の個数= -";
-        if (h_val !== null && D_val !== null && alpha && delta) {
-          const h = h_val;
-          const D = D_val;
-          // (delta.y - h + 1) * [ (5 * (delta.y + h) - 2 * (D - alpha.x)) / 2 ]
-          const term2 = (5 * (delta.y + h) - 2 * (D - alpha.x)) / 2;
-          const val = (delta.y - h + 1) * term2;
-          trapText = `台形の格子点の個数=${Math.round(val)}`;
-        }
-        panel.updateTrapezoid(trapText);
-      }
 
       if (panel.updateH_Big) {
         let HText = "H= -";
@@ -402,6 +384,7 @@ class CanvasWrapper extends HTMLElement {
           this.drawLine((x) => H, "cyan");
 
           // Draw intersections with b0 and b1
+          ctx.fillStyle = "red";
           // b0: y = (x - params.B) / 5 => x = 5 * y + params.B
           const x_b0 = 5 * H + params.B;
           const px_b0 = params.offsetX + x_b0 * zoom;
@@ -409,6 +392,7 @@ class CanvasWrapper extends HTMLElement {
           ctx.beginPath();
           ctx.arc(px_b0, py_H, 2.5, 0, 2 * Math.PI);
           ctx.fill();
+          ctx.fillText("β", px_b0 + 10, py_H - 10);
 
           // b1: y = x / 5 => x = 5 * y
           const x_b1 = 5 * H;
@@ -416,8 +400,39 @@ class CanvasWrapper extends HTMLElement {
           ctx.beginPath();
           ctx.arc(px_b1, py_H, 2.5, 0, 2 * Math.PI);
           ctx.fill();
+          ctx.fillText("δ", px_b1 + 10, py_H - 10);
+
+          ctx.fillStyle = "black"; // Restore color
+
+          // Set new delta for calculations
+          delta = { x: x_b1, y: H };
         }
         panel.updateH_Big(HText);
+
+        // Calculate result with new delta
+        const resultText =
+          alpha && delta
+            ? `解集合の格子点の個数=${Math.round(
+                (alpha.x + 1) * (delta.y + 1)
+              )}`
+            : "解集合の格子点の個数= -";
+
+        if (panel.updateResult) {
+          panel.updateResult(resultText);
+        }
+
+        if (panel.updateTrapezoid) {
+          let trapText = "台形の格子点の個数= -";
+          if (h_val !== null && D_val !== null && alpha && delta) {
+            const h = h_val;
+            const D = D_val;
+            // (delta.y - h + 1) * [ (5 * (delta.y + h) - 2 * (D - alpha.x)) / 2 ]
+            const val =
+              ((delta.y - h + 1) * (5 * (delta.y + h) - 2 * (D - alpha.x))) / 2;
+            trapText = `台形の格子点の個数=${Math.round(val)}`;
+          }
+          panel.updateTrapezoid(trapText);
+        }
       }
     }
   }
