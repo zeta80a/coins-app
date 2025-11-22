@@ -369,6 +369,12 @@ class CanvasWrapper extends HTMLElement {
           alpha && xi ? `h=${Math.floor((xi.x - alpha.x + 5) / 5)}` : "h= -";
         panel.updateH(hText);
       }
+      if (panel.updateD) {
+        const dText = xi
+          ? `D=${Math.min(5 * params.A + params.B, Math.floor(xi.x))}`
+          : "D= -";
+        panel.updateD(dText);
+      }
     }
   }
 }
@@ -455,6 +461,7 @@ class ControlPanel extends HTMLElement {
         </div>
         <div id="calcResult" style="margin-top: 10px; font-weight: bold"></div>
         <div id="hResult" style="margin-top: 5px; font-weight: bold"></div>
+        <div id="dResult" style="margin-top: 5px; font-weight: bold"></div>
       </div>
     `;
   }
@@ -562,6 +569,11 @@ class ControlPanel extends HTMLElement {
 
   updateH(text) {
     const el = this.shadowRoot.getElementById("hResult");
+    if (el) el.textContent = text;
+  }
+
+  updateD(text) {
+    const el = this.shadowRoot.getElementById("dResult");
     if (el) el.textContent = text;
   }
 }
