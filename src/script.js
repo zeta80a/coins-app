@@ -400,6 +400,22 @@ class CanvasWrapper extends HTMLElement {
           const H = Math.min(params.A, Math.floor(D_val / 5));
           HText = `H=${H}`;
           this.drawLine((x) => H, "cyan");
+
+          // Draw intersections with b0 and b1
+          // b0: y = (x - params.B) / 5 => x = 5 * y + params.B
+          const x_b0 = 5 * H + params.B;
+          const px_b0 = params.offsetX + x_b0 * zoom;
+          const py_H = params.offsetY - H * zoom;
+          ctx.beginPath();
+          ctx.arc(px_b0, py_H, 2.5, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // b1: y = x / 5 => x = 5 * y
+          const x_b1 = 5 * H;
+          const px_b1 = params.offsetX + x_b1 * zoom;
+          ctx.beginPath();
+          ctx.arc(px_b1, py_H, 2.5, 0, 2 * Math.PI);
+          ctx.fill();
         }
         panel.updateH_Big(HText);
       }
