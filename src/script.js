@@ -277,7 +277,8 @@ class CanvasWrapper extends HTMLElement {
       { type: "x", x: params.X / 2, show: params.showC1, name: "c1" },
     ];
     let alpha = null,
-      delta = null;
+      delta = null,
+      xi = null;
     ctx.fillStyle = "black";
     ctx.font = "12px sans-serif";
 
@@ -339,8 +340,10 @@ class CanvasWrapper extends HTMLElement {
         else if (
           (l1.name === "a1" && l2.name === "c1") ||
           (l1.name === "c1" && l2.name === "a1")
-        )
+        ) {
           label = "ξ";
+          xi = { x, y };
+        }
         if (label) ctx.fillText(label, px + 10, py - 10);
       }
     }
@@ -351,8 +354,15 @@ class CanvasWrapper extends HTMLElement {
         : "解集合の格子の個数= -";
 
     const panel = document.getElementById("panel");
-    if (panel && panel.updateResult) {
-      panel.updateResult(resultText);
+    if (panel) {
+      if (panel.updateResult) {
+        panel.updateResult(resultText);
+      }
+      if (panel.updateH) {
+        const hText =
+          alpha && xi ? `h=${Math.floor((xi.x - alpha.x + 5) / 5)}` : "h= -";
+        panel.updateH(hText);
+      }
     }
   }
 }
@@ -436,6 +446,7 @@ class ControlPanel extends HTMLElement {
           OffsetY: <input type="number" id="offsetYInput" value="249" />
         </div>
         <div id="calcResult" style="margin-top: 10px; font-weight: bold"></div>
+        <div id="hResult" style="margin-top: 5px; font-weight: bold"></div>
       </div>
     `;
   }
@@ -538,6 +549,11 @@ class ControlPanel extends HTMLElement {
 
   updateResult(text) {
     const el = this.shadowRoot.getElementById("calcResult");
+    if (el) el.textContent = text;
+  }
+
+  updateH(text) {
+    const el = this.shadowRoot.getElementById("hResult");
     if (el) el.textContent = text;
   }
 }
