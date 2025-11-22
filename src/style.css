@@ -5,19 +5,3 @@ body {
   margin: 0;
   background: #f5f5f5;
 }
-
-/* --- canvas ラッパーで中央配置 --- */
-#canvasWrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh; /* ビューポートいっぱい */
-}
-
-/* canvas */
-canvas {
-  border: 1px solid black;
-  cursor: grab;
-  display: block;
-  background: white;
-}

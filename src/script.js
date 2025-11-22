@@ -1,10 +1,5 @@
 // ===============================
-// canvas
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-// ===============================
-// パラメータ
+// パラメータ (Shared State)
 const params = {
   A: 4,
   B: 10,
@@ -19,6 +14,345 @@ const params = {
   showC1: true,
 };
 let zoom = params.zoomPercent / 100;
+
+// Helper to trigger redraw
+function requestDraw() {
+  const wrapper = document.querySelector("canvas-wrapper");
+  if (wrapper && wrapper.draw) {
+    wrapper.draw();
+  }
+}
+
+// ===============================
+// Web Component: CanvasWrapper
+class CanvasWrapper extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.isDragging = false;
+    this.startX = 0;
+    this.startY = 0;
+    this.startOffsetX = 0;
+    this.startOffsetY = 0;
+  }
+
+  connectedCallback() {
+    this.render();
+    this.canvas = this.shadowRoot.getElementById("canvas");
+    this.ctx = this.canvas.getContext("2d");
+    this.setupEventListeners();
+    this.draw();
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          width: 100%;
+        }
+        canvas {
+          border: 1px solid black;
+          cursor: grab;
+          display: block;
+          background: white;
+        }
+      </style>
+      <canvas id="canvas" width="600" height="300"></canvas>
+    `;
+  }
+
+  setupEventListeners() {
+    const canvas = this.canvas;
+
+    canvas.addEventListener("mousedown", (e) => {
+      this.isDragging = true;
+      this.startX = e.clientX;
+      this.startY = e.clientY;
+      this.startOffsetX = params.offsetX;
+      this.startOffsetY = params.offsetY;
+      canvas.style.cursor = "grabbing";
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      if (!this.isDragging) return;
+      params.offsetX = this.startOffsetX + (e.clientX - this.startX);
+      params.offsetY = this.startOffsetY + (e.clientY - this.startY);
+      this.updatePanelInputs();
+      this.draw();
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      this.isDragging = false;
+      canvas.style.cursor = "grab";
+    });
+    canvas.addEventListener("mouseleave", () => {
+      this.isDragging = false;
+      canvas.style.cursor = "grab";
+    });
+
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      const mx = e.offsetX,
+        my = e.offsetY;
+      params.offsetX = mx - (mx - params.offsetX) * factor;
+      params.offsetY = my - (my - params.offsetY) * factor;
+      zoom *= factor;
+      params.zoomPercent = Math.round(zoom * 100);
+      this.updatePanelInputs();
+      this.draw();
+    });
+  }
+
+  updatePanelInputs() {
+    const panel = document.getElementById("panel");
+    if (panel && panel.updateInputs) {
+      panel.updateInputs();
+    }
+  }
+
+  draw() {
+    if (!this.ctx) return;
+    const { width, height } = this.canvas;
+    this.ctx.clearRect(0, 0, width, height);
+    this.drawGrid();
+    this.drawAxes();
+    this.drawLine((x) => 0, "red");
+    if (params.showA) this.drawLine((x) => params.A, "orange");
+    if (params.showB) this.drawLine((x) => (x - params.B) / 5, "green");
+    this.drawLine((x) => x / 5, "blue");
+    if (params.showC)
+      this.drawVerticalLine((params.X - params.C) / 2, "purple");
+    if (params.showC1) this.drawVerticalLine(params.X / 2, "magenta");
+    this.drawIntersections();
+  }
+
+  drawGrid() {
+    const ctx = this.ctx;
+    const { width, height } = this.canvas;
+
+    ctx.strokeStyle = "#cccccc";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+
+    const pxStartX = -50;
+    const pxEndX = width + 50;
+    const worldXStart = Math.ceil((pxStartX - params.offsetX) / zoom);
+    const worldXEnd = Math.floor((pxEndX - params.offsetX) / zoom);
+    ctx.beginPath();
+    for (let wx = worldXStart; wx <= worldXEnd; wx++) {
+      const px = Math.round(params.offsetX + wx * zoom) + 0.5;
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, height);
+    }
+    ctx.stroke();
+
+    const pyStartY = -50;
+    const pyEndY = height + 50;
+    const worldYStart = Math.ceil((params.offsetY - pyEndY) / zoom);
+    const worldYEnd = Math.floor((params.offsetY - pyStartY) / zoom);
+    ctx.beginPath();
+    for (let wy = worldYStart; wy <= worldYEnd; wy++) {
+      const py = Math.round(params.offsetY - wy * zoom) + 0.5;
+      ctx.moveTo(0, py);
+      ctx.lineTo(width, py);
+    }
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "black";
+    ctx.font = "12px sans-serif";
+
+    // x labels
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const approxLabelWidth = ctx.measureText("0000").width + 6;
+    const xStep = Math.max(1, Math.ceil(approxLabelWidth / zoom));
+    let labelY = Math.round(params.offsetY + 2);
+    labelY = Math.max(2, Math.min(height - 12, labelY));
+    const xLabelStart =
+      Math.ceil((pxStartX - params.offsetX) / zoom / xStep) * xStep;
+    const xLabelEnd =
+      Math.floor((pxEndX - params.offsetX) / zoom / xStep) * xStep;
+    for (let x = xLabelStart; x <= xLabelEnd; x += xStep) {
+      const px = Math.round(params.offsetX + x * zoom);
+      if (px >= -50 && px <= width + 50) ctx.fillText(x, px, labelY);
+    }
+
+    // y labels
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    const yStep = Math.max(1, Math.ceil((12 + 4) / zoom));
+    const axisProposedX = Math.round(params.offsetX - 4);
+    const padding = 4;
+    const yLabelStart =
+      Math.ceil((params.offsetY - pyEndY) / zoom / yStep) * yStep;
+    const yLabelEnd =
+      Math.floor((params.offsetY - pyStartY) / zoom / yStep) * yStep;
+    for (let y = yLabelStart; y <= yLabelEnd; y += yStep) {
+      const py = Math.round(params.offsetY - y * zoom);
+      if (py >= -50 && py <= height + 50) {
+        const txt = String(y);
+        const w = ctx.measureText(txt).width;
+        const drawX = Math.min(
+          Math.max(axisProposedX, Math.ceil(w) + padding),
+          width - padding
+        );
+        ctx.fillText(txt, drawX, py);
+      }
+    }
+  }
+
+  drawAxes() {
+    const ctx = this.ctx;
+    const { width, height } = this.canvas;
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, params.offsetY);
+    ctx.lineTo(width, params.offsetY);
+    ctx.moveTo(params.offsetX, 0);
+    ctx.lineTo(params.offsetX, height);
+    ctx.stroke();
+  }
+
+  drawLine(f, color = "red") {
+    const ctx = this.ctx;
+    const { width } = this.canvas;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const step = Math.max(1, Math.round(1 / Math.max(zoom, 0.0001)));
+    let started = false;
+    for (let px = 0; px <= width; px += step) {
+      const x = (px - params.offsetX) / zoom;
+      const y = f(x);
+      const py = params.offsetY - y * zoom;
+      if (!started) {
+        ctx.moveTo(px, py);
+        started = true;
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+  }
+
+  drawVerticalLine(x, color = "blue") {
+    const ctx = this.ctx;
+    const { height } = this.canvas;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    const px = params.offsetX + x * zoom;
+    ctx.beginPath();
+    ctx.moveTo(px, 0);
+    ctx.lineTo(px, height);
+    ctx.stroke();
+  }
+
+  drawIntersections() {
+    const ctx = this.ctx;
+    const { width } = this.canvas;
+    const lines = [
+      { type: "y", f: (x) => 0, show: true, name: "a0" },
+      { type: "y", f: (x) => params.A, show: params.showA, name: "a1" },
+      {
+        type: "y",
+        f: (x) => (x - params.B) / 5,
+        show: params.showB,
+        name: "b0",
+      },
+      { type: "y", f: (x) => x / 5, show: true, name: "b1" },
+      {
+        type: "x",
+        x: (params.X - params.C) / 2,
+        show: params.showC,
+        name: "c0",
+      },
+      { type: "x", x: params.X / 2, show: params.showC1, name: "c1" },
+    ];
+    let alpha = null,
+      delta = null;
+    ctx.fillStyle = "black";
+    ctx.font = "12px sans-serif";
+
+    for (let i = 0; i < lines.length; i++) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const l1 = lines[i],
+          l2 = lines[j];
+        if (!l1.show || !l2.show) continue;
+        let x, y;
+        if (l1.type === "y" && l2.type === "y") {
+          const xMin = Math.floor(-params.offsetX / zoom);
+          const xMax = Math.ceil((width - params.offsetX) / zoom);
+          let found = false;
+          const step = 0.5;
+          for (let xi = xMin; xi <= xMax; xi += step) {
+            if (Math.abs(l1.f(xi) - l2.f(xi)) < 1e-6) {
+              x = xi;
+              y = l1.f(xi);
+              found = true;
+              break;
+            }
+          }
+          if (!found) continue;
+        } else if (l1.type === "y" && l2.type === "x") {
+          x = l2.x;
+          y = l1.f(x);
+        } else if (l1.type === "x" && l2.type === "y") {
+          x = l1.x;
+          y = l2.f(x);
+        } else continue;
+        const px = params.offsetX + x * zoom,
+          py = params.offsetY - y * zoom;
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
+        ctx.fill();
+        let label = "";
+        if (
+          (l1.name === "a0" && l2.name === "b1") ||
+          (l1.name === "b1" && l2.name === "a0")
+        )
+          label = "γ";
+        else if (
+          (l1.name === "a0" && l2.name === "b0") ||
+          (l1.name === "b0" && l2.name === "a0")
+        ) {
+          label = "α";
+          alpha = { x, y };
+        } else if (
+          (l1.name === "a1" && l2.name === "b1") ||
+          (l1.name === "b1" && l2.name === "a1")
+        ) {
+          label = "δ";
+          delta = { x, y };
+        } else if (
+          (l1.name === "a1" && l2.name === "b0") ||
+          (l1.name === "b0" && l2.name === "a1")
+        )
+          label = "β";
+        if (label) ctx.fillText(label, px + 10, py - 10);
+      }
+    }
+
+    const resultText =
+      alpha && delta
+        ? `解集合の格子の個数=${Math.round((alpha.x + 1) * (delta.y + 1))}`
+        : "解集合の格子の個数= -";
+
+    const panel = document.getElementById("panel");
+    if (panel && panel.updateResult) {
+      panel.updateResult(resultText);
+    }
+  }
+}
+
+customElements.define("canvas-wrapper", CanvasWrapper);
 
 // ===============================
 // Web Component: ControlPanel
@@ -120,13 +454,13 @@ class ControlPanel extends HTMLElement {
         const val = Number(e.target.value);
         params[param] = val;
         num.value = val;
-        draw();
+        requestDraw();
       });
       num.addEventListener("input", (e) => {
         const val = Number(e.target.value);
         params[param] = val;
         range.value = val;
-        draw();
+        requestDraw();
       });
     };
 
@@ -138,19 +472,19 @@ class ControlPanel extends HTMLElement {
     // Checkboxes
     shadow.getElementById("chkA").addEventListener("change", (e) => {
       params.showA = e.target.checked;
-      draw();
+      requestDraw();
     });
     shadow.getElementById("chkB").addEventListener("change", (e) => {
       params.showB = e.target.checked;
-      draw();
+      requestDraw();
     });
     shadow.getElementById("chkC").addEventListener("change", (e) => {
       params.showC = e.target.checked;
-      draw();
+      requestDraw();
     });
     shadow.getElementById("chkX").addEventListener("change", (e) => {
       params.showC1 = e.target.checked;
-      draw();
+      requestDraw();
     });
 
     // Other Inputs
@@ -178,7 +512,7 @@ class ControlPanel extends HTMLElement {
       if (el) {
         el.addEventListener("input", (e) => {
           inputHandlers[id](e.target.value);
-          draw();
+          requestDraw();
         });
       }
     });
@@ -205,330 +539,4 @@ class ControlPanel extends HTMLElement {
 
 customElements.define("control-panel", ControlPanel);
 
-// ===============================
-// canvas 操作: ドラッグ & ズーム
-let isDragging = false,
-  startX = 0,
-  startY = 0,
-  startOffsetX = 0,
-  startOffsetY = 0;
-
-canvas.addEventListener("mousedown", (e) => {
-  isDragging = true;
-  startX = e.clientX;
-  startY = e.clientY;
-  startOffsetX = params.offsetX;
-  startOffsetY = params.offsetY;
-  canvas.style.cursor = "grabbing";
-});
-
-canvas.addEventListener("mousemove", (e) => {
-  if (!isDragging) return;
-  params.offsetX = startOffsetX + (e.clientX - startX);
-  params.offsetY = startOffsetY + (e.clientY - startY);
-  updateInputs();
-  draw();
-});
-
-canvas.addEventListener("mouseup", () => {
-  isDragging = false;
-  canvas.style.cursor = "grab";
-});
-canvas.addEventListener("mouseleave", () => {
-  isDragging = false;
-  canvas.style.cursor = "grab";
-});
-
-canvas.addEventListener("wheel", (e) => {
-  e.preventDefault();
-  const factor = e.deltaY < 0 ? 1.1 : 0.9;
-  const mx = e.offsetX,
-    my = e.offsetY;
-  params.offsetX = mx - (mx - params.offsetX) * factor;
-  params.offsetY = my - (my - params.offsetY) * factor;
-  zoom *= factor;
-  params.zoomPercent = Math.round(zoom * 100);
-  updateInputs();
-  draw();
-});
-
-// ===============================
-// 描画関数
-function drawGrid() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.strokeStyle = "#cccccc";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([5, 5]);
-
-  // バッチで縦線を描画（複数の短いパスをまとめて stroke することで高速化）
-  const pxStartX = -50;
-  const pxEndX = canvas.width + 50;
-  const worldXStart = Math.ceil((pxStartX - params.offsetX) / zoom);
-  const worldXEnd = Math.floor((pxEndX - params.offsetX) / zoom);
-  ctx.beginPath();
-  for (let wx = worldXStart; wx <= worldXEnd; wx++) {
-    const px = Math.round(params.offsetX + wx * zoom) + 0.5;
-    ctx.moveTo(px, 0);
-    ctx.lineTo(px, canvas.height);
-  }
-  ctx.stroke();
-
-  // 横線をバッチ描画
-  const pyStartY = -50;
-  const pyEndY = canvas.height + 50;
-  const worldYStart = Math.ceil((params.offsetY - pyEndY) / zoom);
-  const worldYEnd = Math.floor((params.offsetY - pyStartY) / zoom);
-  ctx.beginPath();
-  for (let wy = worldYStart; wy <= worldYEnd; wy++) {
-    const py = Math.round(params.offsetY - wy * zoom) + 0.5;
-    ctx.moveTo(0, py);
-    ctx.lineTo(canvas.width, py);
-  }
-  ctx.stroke();
-
-  ctx.setLineDash([]);
-
-  // ======================
-  // ラベル描画（既存ロジックを維持しつつ、描画範囲を狭める）
-  ctx.fillStyle = "black";
-  ctx.font = "12px sans-serif";
-
-  // xラベル
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  const approxLabelWidth = ctx.measureText("0000").width + 6;
-  const xStep = Math.max(1, Math.ceil(approxLabelWidth / zoom));
-  let labelY = Math.round(params.offsetY + 2);
-  labelY = Math.max(2, Math.min(canvas.height - 12, labelY));
-  const xLabelStart =
-    Math.ceil((pxStartX - params.offsetX) / zoom / xStep) * xStep;
-  const xLabelEnd =
-    Math.floor((pxEndX - params.offsetX) / zoom / xStep) * xStep;
-  for (let x = xLabelStart; x <= xLabelEnd; x += xStep) {
-    const px = Math.round(params.offsetX + x * zoom);
-    if (px >= -50 && px <= canvas.width + 50) ctx.fillText(x, px, labelY);
-  }
-
-  // yラベル
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  const yStep = Math.max(1, Math.ceil((12 + 4) / zoom));
-  const axisProposedX = Math.round(params.offsetX - 4);
-  const padding = 4;
-  const yLabelStart =
-    Math.ceil((params.offsetY - pyEndY) / zoom / yStep) * yStep;
-  const yLabelEnd =
-    Math.floor((params.offsetY - pyStartY) / zoom / yStep) * yStep;
-  for (let y = yLabelStart; y <= yLabelEnd; y += yStep) {
-    const py = Math.round(params.offsetY - y * zoom);
-    if (py >= -50 && py <= canvas.height + 50) {
-      const txt = String(y);
-      const w = ctx.measureText(txt).width;
-      // 右寄せで描画するので、右端 (drawX) を軸位置にするが
-      // 左側がキャンバス外に出ないようにテキスト幅に基づき最小位置を決める
-      const drawX = Math.min(
-        Math.max(axisProposedX, Math.ceil(w) + padding),
-        canvas.width - padding
-      );
-      ctx.fillText(txt, drawX, py);
-    }
-  }
-}
-
-function drawAxes() {
-  ctx.strokeStyle = "black";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, params.offsetY);
-  ctx.lineTo(canvas.width, params.offsetY);
-  ctx.moveTo(params.offsetX, 0);
-  ctx.lineTo(params.offsetX, canvas.height);
-  ctx.stroke();
-}
-
-function drawLine(f, color = "red") {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  // ピクセル単位の全走査は重いので、ズームに合わせて間引き（zoom >=1 -> step=1px, zoom<1 -> step>1）
-  const step = Math.max(1, Math.round(1 / Math.max(zoom, 0.0001)));
-  let started = false;
-  for (let px = 0; px <= canvas.width; px += step) {
-    const x = (px - params.offsetX) / zoom;
-    const y = f(x);
-    const py = params.offsetY - y * zoom;
-    if (!started) {
-      ctx.moveTo(px, py);
-      started = true;
-    } else {
-      ctx.lineTo(px, py);
-    }
-  }
-  ctx.stroke();
-}
-
-function drawVerticalLine(x, color = "blue") {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
-  const px = params.offsetX + x * zoom;
-  ctx.beginPath();
-  ctx.moveTo(px, 0);
-  ctx.lineTo(px, canvas.height);
-  ctx.stroke();
-}
-
-// ===============================
-// 交点と解の計算
-function drawIntersections() {
-  const lines = [
-    { type: "y", f: (x) => 0, show: true, name: "a0" },
-    { type: "y", f: (x) => params.A, show: params.showA, name: "a1" },
-    { type: "y", f: (x) => (x - params.B) / 5, show: params.showB, name: "b0" },
-    { type: "y", f: (x) => x / 5, show: true, name: "b1" },
-    { type: "x", x: (params.X - params.C) / 2, show: params.showC, name: "c0" },
-    { type: "x", x: params.X / 2, show: params.showC1, name: "c1" },
-  ];
-  let alpha = null,
-    delta = null;
-  ctx.fillStyle = "black";
-  ctx.font = "12px sans-serif";
-
-  for (let i = 0; i < lines.length; i++) {
-    for (let j = i + 1; j < lines.length; j++) {
-      const l1 = lines[i],
-        l2 = lines[j];
-      if (!l1.show || !l2.show) continue;
-      let x, y;
-      if (l1.type === "y" && l2.type === "y") {
-        // 表示されている範囲内だけを探索して交点を探す（粗探索）。
-        const xMin = Math.floor(-params.offsetX / zoom);
-        const xMax = Math.ceil((canvas.width - params.offsetX) / zoom);
-        let found = false;
-        const step = 0.5; // 十分小さければほとんどの場合見つかる
-        for (let xi = xMin; xi <= xMax; xi += step) {
-          if (Math.abs(l1.f(xi) - l2.f(xi)) < 1e-6) {
-            x = xi;
-            y = l1.f(xi);
-            found = true;
-            break;
-          }
-        }
-        if (!found) continue;
-      } else if (l1.type === "y" && l2.type === "x") {
-        x = l2.x;
-        y = l1.f(x);
-      } else if (l1.type === "x" && l2.type === "y") {
-        x = l1.x;
-        y = l2.f(x);
-      } else continue;
-      const px = params.offsetX + x * zoom,
-        py = params.offsetY - y * zoom;
-      ctx.beginPath();
-      ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
-      ctx.fill();
-      let label = "";
-      if (
-        (l1.name === "a0" && l2.name === "b1") ||
-        (l1.name === "b1" && l2.name === "a0")
-      )
-        label = "γ";
-      else if (
-        (l1.name === "a0" && l2.name === "b0") ||
-        (l1.name === "b0" && l2.name === "a0")
-      ) {
-        label = "α";
-        alpha = { x, y };
-      } else if (
-        (l1.name === "a1" && l2.name === "b1") ||
-        (l1.name === "b1" && l2.name === "a1")
-      ) {
-        label = "δ";
-        delta = { x, y };
-      } else if (
-        (l1.name === "a1" && l2.name === "b0") ||
-        (l1.name === "b0" && l2.name === "a1")
-      )
-        label = "β";
-      if (label) ctx.fillText(label, px + 10, py - 10);
-    }
-  }
-
-  const resultText =
-    alpha && delta
-      ? `解集合の格子の個数=${Math.round((alpha.x + 1) * (delta.y + 1))}`
-      : "解集合の格子の個数= -";
-
-  const panel = document.getElementById("panel");
-  if (panel && panel.updateResult) {
-    panel.updateResult(resultText);
-  }
-}
-
-// ===============================
-// 描画まとめ
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGrid();
-  drawAxes();
-  drawLine((x) => 0, "red");
-  if (params.showA) drawLine((x) => params.A, "orange");
-  if (params.showB) drawLine((x) => (x - params.B) / 5, "green");
-  drawLine((x) => x / 5, "blue");
-  if (params.showC) drawVerticalLine((params.X - params.C) / 2, "purple");
-  if (params.showC1) drawVerticalLine(params.X / 2, "magenta");
-  drawIntersections();
-}
-
-// 初期描画
-function updateInputs() {
-  const panel = document.getElementById("panel");
-  if (panel && panel.updateInputs) {
-    panel.updateInputs();
-  }
-}
-
-// Wait for DOM to be ready to ensure custom element is upgraded
-window.addEventListener("DOMContentLoaded", () => {
-  updateInputs();
-  draw();
-});
-
-canvas.addEventListener("mousedown", (e) => {
-  isDragging = true;
-  startX = e.clientX;
-  startY = e.clientY;
-  startOffsetX = params.offsetX;
-  startOffsetY = params.offsetY;
-  canvas.style.cursor = "grabbing";
-});
-
-canvas.addEventListener("mousemove", (e) => {
-  if (!isDragging) return;
-  params.offsetX = startOffsetX + (e.clientX - startX);
-  params.offsetY = startOffsetY + (e.clientY - startY);
-  updateInputs();
-  draw();
-});
-
-canvas.addEventListener("mouseup", () => {
-  isDragging = false;
-  canvas.style.cursor = "grab";
-});
-canvas.addEventListener("mouseleave", () => {
-  isDragging = false;
-  canvas.style.cursor = "grab";
-});
-
-canvas.addEventListener("wheel", (e) => {
-  e.preventDefault();
-  const factor = e.deltaY < 0 ? 1.1 : 0.9;
-  const mx = e.offsetX,
-    my = e.offsetY;
-  params.offsetX = mx - (mx - params.offsetX) * factor;
-  params.offsetY = my - (my - params.offsetY) * factor;
-  zoom *= factor;
-  params.zoomPercent = Math.round(zoom * 100);
-  updateInputs();
-  draw();
-});
+// Initial draw is handled by CanvasWrapper connectedCallback
