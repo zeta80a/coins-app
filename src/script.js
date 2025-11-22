@@ -368,16 +368,30 @@ class CanvasWrapper extends HTMLElement {
         ? Math.min(5 * params.A + params.B, Math.floor(xi.x))
         : null;
 
+      let h_val = null;
+      if (alpha && D_val !== null) {
+        h_val = Math.floor((D_val - alpha.x + 5) / 5);
+      }
+
       if (panel.updateH) {
-        const hText =
-          alpha && D_val !== null
-            ? `h=${Math.floor((D_val - alpha.x + 5) / 5)}`
-            : "h= -";
+        const hText = h_val !== null ? `h=${h_val}` : "h= -";
         panel.updateH(hText);
       }
       if (panel.updateD) {
         const dText = D_val !== null ? `D=${D_val}` : "D= -";
         panel.updateD(dText);
+      }
+      if (panel.updateTrapezoid) {
+        let trapText = "台形の格子の個数= -";
+        if (h_val !== null && D_val !== null && alpha && delta) {
+          const h = h_val;
+          const D = D_val;
+          // (delta.y - h + 1) * [ (5 * (delta.y + h) - 2 * (D - alpha.x)) / 2 ]
+          const term2 = (5 * (delta.y + h) - 2 * (D - alpha.x)) / 2;
+          const val = (delta.y - h + 1) * term2;
+          trapText = `台形の格子の個数=${Math.round(val)}`;
+        }
+        panel.updateTrapezoid(trapText);
       }
     }
   }
@@ -490,6 +504,7 @@ class ControlPanel extends HTMLElement {
         <div id="calcResult" style="margin-top: 10px; font-weight: bold"></div>
         <div id="hResult" style="margin-top: 5px; font-weight: bold"></div>
         <div id="dResult" style="margin-top: 5px; font-weight: bold"></div>
+        <div id="trapezoidResult" style="margin-top: 5px; font-weight: bold"></div>
       </div>
     `;
   }
@@ -625,6 +640,11 @@ class ControlPanel extends HTMLElement {
 
   updateD(text) {
     const el = this.shadowRoot.getElementById("dResult");
+    if (el) el.textContent = text;
+  }
+
+  updateTrapezoid(text) {
+    const el = this.shadowRoot.getElementById("trapezoidResult");
     if (el) el.textContent = text;
   }
 }
