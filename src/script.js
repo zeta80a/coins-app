@@ -21,6 +21,191 @@ const params = {
 let zoom = params.zoomPercent / 100;
 
 // ===============================
+// Web Component: ControlPanel
+class ControlPanel extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+  }
+
+  connectedCallback() {
+    this.render();
+    this.setupEventListeners();
+    this.updateInputs();
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          position: fixed;
+          top: 10px;
+          left: 10px;
+          z-index: 9999;
+          background: rgba(255, 255, 255, 0.95);
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          font-family: sans-serif;
+          display: block;
+        }
+        label {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 6px;
+        }
+        input[type="number"] {
+          width: 56px;
+        }
+        input[type="checkbox"] {
+          margin-left: 6px;
+        }
+        #guiContent {
+          display: block;
+        }
+      </style>
+      <button id="toggleGui">pannel</button>
+      <div id="guiContent">
+        <div>
+          <label>A <input type="checkbox" id="chkA" checked /></label>
+          <input type="range" id="rangeA" min="0" max="50" value="25" />
+          <input type="number" id="numA" min="0" max="50" value="25" />
+        </div>
+        <div>
+          <label>B <input type="checkbox" id="chkB" checked /></label>
+          <input type="range" id="rangeB" min="0" max="50" value="40" />
+          <input type="number" id="numB" min="0" max="50" value="40" />
+        </div>
+        <div>
+          <label>C <input type="checkbox" id="chkC" checked /></label>
+          <input type="range" id="rangeC" min="0" max="50" value="50" />
+          <input type="number" id="numC" min="0" max="50" value="50" />
+        </div>
+        <div>
+          <label>X <input type="checkbox" id="chkX" checked /></label>
+          <input type="range" id="rangeX" min="1" max="400" value="120" />
+          <input type="number" id="numX" min="1" max="400" value="120" />
+        </div>
+        <div>
+          Zoom(%):
+          <input type="number" id="zoomInput" value="870" min="10" max="1000" />
+        </div>
+        <div>OffsetX: <input type="number" id="offsetXInput" value="86" /></div>
+        <div>
+          OffsetY: <input type="number" id="offsetYInput" value="249" />
+        </div>
+        <div id="calcResult" style="margin-top: 10px; font-weight: bold"></div>
+      </div>
+    `;
+  }
+
+  setupEventListeners() {
+    const shadow = this.shadowRoot;
+
+    // Toggle GUI
+    shadow.getElementById("toggleGui").addEventListener("click", () => {
+      const content = shadow.getElementById("guiContent");
+      content.style.display =
+        content.style.display === "none" ? "block" : "none";
+    });
+
+    // Bind Sliders & Numbers
+    const bindSliderNumber = (rangeId, numId, param) => {
+      const range = shadow.getElementById(rangeId);
+      const num = shadow.getElementById(numId);
+
+      range.addEventListener("input", (e) => {
+        const val = Number(e.target.value);
+        params[param] = val;
+        num.value = val;
+        draw();
+      });
+      num.addEventListener("input", (e) => {
+        const val = Number(e.target.value);
+        params[param] = val;
+        range.value = val;
+        draw();
+      });
+    };
+
+    bindSliderNumber("rangeA", "numA", "A");
+    bindSliderNumber("rangeB", "numB", "B");
+    bindSliderNumber("rangeC", "numC", "C");
+    bindSliderNumber("rangeX", "numX", "X");
+
+    // Checkboxes
+    shadow.getElementById("chkA").addEventListener("change", (e) => {
+      params.showA = e.target.checked;
+      draw();
+    });
+    shadow.getElementById("chkB").addEventListener("change", (e) => {
+      params.showB = e.target.checked;
+      draw();
+    });
+    shadow.getElementById("chkC").addEventListener("change", (e) => {
+      params.showC = e.target.checked;
+      draw();
+    });
+    shadow.getElementById("chkX").addEventListener("change", (e) => {
+      params.showC1 = e.target.checked;
+      draw();
+    });
+
+    // Other Inputs
+    const inputHandlers = {
+      zoomInput: (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return;
+        zoom = n / 100;
+        params.zoomPercent = n;
+      },
+      offsetXInput: (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return;
+        params.offsetX = n;
+      },
+      offsetYInput: (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return;
+        params.offsetY = n;
+      },
+    };
+
+    Object.keys(inputHandlers).forEach((id) => {
+      const el = shadow.getElementById(id);
+      if (el) {
+        el.addEventListener("input", (e) => {
+          inputHandlers[id](e.target.value);
+          draw();
+        });
+      }
+    });
+  }
+
+  updateInputs() {
+    const shadow = this.shadowRoot;
+    if (!shadow) return;
+
+    const zoomInput = shadow.getElementById("zoomInput");
+    const offsetXInput = shadow.getElementById("offsetXInput");
+    const offsetYInput = shadow.getElementById("offsetYInput");
+
+    if (zoomInput) zoomInput.value = params.zoomPercent;
+    if (offsetXInput) offsetXInput.value = Math.round(params.offsetX);
+    if (offsetYInput) offsetYInput.value = Math.round(params.offsetY);
+  }
+
+  updateResult(text) {
+    const el = this.shadowRoot.getElementById("calcResult");
+    if (el) el.textContent = text;
+  }
+}
+
+customElements.define("control-panel", ControlPanel);
+
+// ===============================
 // canvas 操作: ドラッグ & ズーム
 let isDragging = false,
   startX = 0,
@@ -269,10 +454,15 @@ function drawIntersections() {
     }
   }
 
-  document.getElementById("calcResult").textContent =
+  const resultText =
     alpha && delta
       ? `解集合の格子の個数=${Math.round((alpha.x + 1) * (delta.y + 1))}`
       : "解集合の格子の個数= -";
+
+  const panel = document.getElementById("panel");
+  if (panel && panel.updateResult) {
+    panel.updateResult(resultText);
+  }
 }
 
 // ===============================
@@ -290,85 +480,55 @@ function draw() {
   drawIntersections();
 }
 
-// ===============================
-// GUI 入力連動
-function bindSliderNumber(rangeId, numId, param) {
-  const range = document.getElementById(rangeId),
-    num = document.getElementById(numId);
-  range.addEventListener("input", (e) => {
-    params[param] = Number(e.target.value);
-    num.value = e.target.value;
-    draw();
-  });
-  num.addEventListener("input", (e) => {
-    let v = Number(e.target.value);
-    params[param] = v;
-    range.value = v;
-    draw();
-  });
-}
-bindSliderNumber("rangeA", "numA", "A");
-bindSliderNumber("rangeB", "numB", "B");
-bindSliderNumber("rangeC", "numC", "C");
-bindSliderNumber("rangeX", "numX", "X");
-
-document.getElementById("chkA").addEventListener("change", (e) => {
-  params.showA = e.target.checked;
-  draw();
-});
-document.getElementById("chkB").addEventListener("change", (e) => {
-  params.showB = e.target.checked;
-  draw();
-});
-document.getElementById("chkC").addEventListener("change", (e) => {
-  params.showC = e.target.checked;
-  draw();
-});
-document.getElementById("chkX").addEventListener("change", (e) => {
-  params.showC1 = e.target.checked;
-  draw();
-});
-
-// 入力ハンドラをマップ化して明示的に処理する（可読性と堅牢性向上）
-const inputHandlers = {
-  zoomInput: (v) => {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return;
-    zoom = n / 100;
-    params.zoomPercent = n;
-  },
-  offsetXInput: (v) => {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return;
-    params.offsetX = n;
-  },
-  offsetYInput: (v) => {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return;
-    params.offsetY = n;
-  },
-};
-
-Object.keys(inputHandlers).forEach((id) => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener("input", (e) => {
-    inputHandlers[id](e.target.value);
-    draw();
-  });
-});
-
-// GUI表示/非表示
-document.getElementById("toggleGui").addEventListener("click", () => {
-  const content = document.getElementById("guiContent");
-  content.style.display = content.style.display === "none" ? "block" : "none";
-});
-
 // 初期描画
 function updateInputs() {
-  document.getElementById("zoomInput").value = params.zoomPercent;
-  document.getElementById("offsetXInput").value = Math.round(params.offsetX);
-  document.getElementById("offsetYInput").value = Math.round(params.offsetY);
+  const panel = document.getElementById("panel");
+  if (panel && panel.updateInputs) {
+    panel.updateInputs();
+  }
 }
-updateInputs();
-draw();
+
+// Wait for DOM to be ready to ensure custom element is upgraded
+window.addEventListener("DOMContentLoaded", () => {
+  updateInputs();
+  draw();
+});
+
+canvas.addEventListener("mousedown", (e) => {
+  isDragging = true;
+  startX = e.clientX;
+  startY = e.clientY;
+  startOffsetX = params.offsetX;
+  startOffsetY = params.offsetY;
+  canvas.style.cursor = "grabbing";
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (!isDragging) return;
+  params.offsetX = startOffsetX + (e.clientX - startX);
+  params.offsetY = startOffsetY + (e.clientY - startY);
+  updateInputs();
+  draw();
+});
+
+canvas.addEventListener("mouseup", () => {
+  isDragging = false;
+  canvas.style.cursor = "grab";
+});
+canvas.addEventListener("mouseleave", () => {
+  isDragging = false;
+  canvas.style.cursor = "grab";
+});
+
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  const mx = e.offsetX,
+    my = e.offsetY;
+  params.offsetX = mx - (mx - params.offsetX) * factor;
+  params.offsetY = my - (my - params.offsetY) * factor;
+  zoom *= factor;
+  params.zoomPercent = Math.round(zoom * 100);
+  updateInputs();
+  draw();
+});
