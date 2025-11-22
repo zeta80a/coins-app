@@ -584,7 +584,7 @@ class ControlPanel extends HTMLElement {
         </div>
       </div>
       <div id="resultPanelWrapper">
-        <button id="toggleResult">results</button>
+        <button id="toggleResult">L_D</button>
         <div id="resultContent">
           <div id="dResult" style="margin-top: 10px; font-weight: bold"></div>
           <div id="HDResult" style="margin-top: 5px; font-weight: bold"></div>
