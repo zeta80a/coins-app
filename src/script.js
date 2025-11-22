@@ -259,15 +259,24 @@ class CanvasWrapper extends HTMLElement {
     const ctx = this.ctx;
     const { width } = this.canvas;
     const lines = [
-      { type: "y", f: (x) => 0, show: true, name: "a0" },
-      { type: "y", f: (x) => params.A, show: params.showA, name: "a1" },
+      { type: "y", f: (x) => 0, show: true, name: "a0", m: 0, c: 0 },
+      {
+        type: "y",
+        f: (x) => params.A,
+        show: params.showA,
+        name: "a1",
+        m: 0,
+        c: params.A,
+      },
       {
         type: "y",
         f: (x) => (x - params.B) / 5,
         show: params.showB,
         name: "b0",
+        m: 0.2,
+        c: -params.B / 5,
       },
-      { type: "y", f: (x) => x / 5, show: true, name: "b1" },
+      { type: "y", f: (x) => x / 5, show: true, name: "b1", m: 0.2, c: 0 },
       {
         type: "x",
         x: (params.X - params.C) / 2,
@@ -288,29 +297,26 @@ class CanvasWrapper extends HTMLElement {
           l2 = lines[j];
         if (!l1.show || !l2.show) continue;
         let x, y;
+
         if (l1.type === "y" && l2.type === "y") {
-          const xMin = Math.floor(-params.offsetX / zoom);
-          const xMax = Math.ceil((width - params.offsetX) / zoom);
-          let found = false;
-          const step = 0.5;
-          for (let xi = xMin; xi <= xMax; xi += step) {
-            if (Math.abs(l1.f(xi) - l2.f(xi)) < 1e-6) {
-              x = xi;
-              y = l1.f(xi);
-              found = true;
-              break;
-            }
-          }
-          if (!found) continue;
+          if (Math.abs(l1.m - l2.m) < 1e-9) continue; // Parallel
+          x = (l2.c - l1.c) / (l1.m - l2.m);
+          y = l1.m * x + l1.c;
         } else if (l1.type === "y" && l2.type === "x") {
           x = l2.x;
-          y = l1.f(x);
+          y = l1.m * x + l1.c;
         } else if (l1.type === "x" && l2.type === "y") {
           x = l1.x;
-          y = l2.f(x);
-        } else continue;
+          y = l2.m * x + l2.c;
+        } else {
+          continue; // Both x lines (parallel)
+        }
+
         const px = params.offsetX + x * zoom,
           py = params.offsetY - y * zoom;
+
+        // Draw point and label only if roughly within or near viewport could be an optimization,
+        // but Canvas handles out-of-bounds drawing fine.
         ctx.beginPath();
         ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
         ctx.fill();
@@ -381,6 +387,8 @@ class ControlPanel extends HTMLElement {
     this.render();
     this.setupEventListeners();
     this.updateInputs();
+    // Trigger initial draw to ensure results are displayed
+    setTimeout(() => requestDraw(), 0);
   }
 
   render() {
