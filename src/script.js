@@ -393,6 +393,15 @@ class CanvasWrapper extends HTMLElement {
         }
         panel.updateTrapezoid(trapText);
       }
+
+      if (panel.updateH_Big) {
+        let HText = "H= -";
+        if (D_val !== null) {
+          const H = Math.min(params.A, Math.floor(D_val / 5));
+          HText = `H=${H}`;
+        }
+        panel.updateH_Big(HText);
+      }
     }
   }
 }
@@ -505,6 +514,7 @@ class ControlPanel extends HTMLElement {
         <div id="hResult" style="margin-top: 5px; font-weight: bold"></div>
         <div id="dResult" style="margin-top: 5px; font-weight: bold"></div>
         <div id="trapezoidResult" style="margin-top: 5px; font-weight: bold"></div>
+        <div id="HResult" style="margin-top: 5px; font-weight: bold"></div>
       </div>
     `;
   }
@@ -645,6 +655,11 @@ class ControlPanel extends HTMLElement {
 
   updateTrapezoid(text) {
     const el = this.shadowRoot.getElementById("trapezoidResult");
+    if (el) el.textContent = text;
+  }
+
+  updateH_Big(text) {
+    const el = this.shadowRoot.getElementById("HResult");
     if (el) el.textContent = text;
   }
 }
