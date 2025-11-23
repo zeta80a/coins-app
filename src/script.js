@@ -737,45 +737,7 @@ class CoinsApp extends HTMLElement {
   }
 
   calculateIntersections() {
-    const lines = [
-      { type: "y", f: (x) => 0, show: true, name: "a0", m: 0, c: 0 },
-      {
-        type: "y",
-        f: (x) => this.params.A,
-        show: this.params.showA,
-        name: "a1",
-        m: 0,
-        c: this.params.A,
-      },
-      {
-        type: "y",
-        f: (x) => (x - this.params.B) / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        show: this.params.showB,
-        name: "b0",
-        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        c: -this.params.B / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-      },
-      {
-        type: "y",
-        f: (x) => x / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        show: true,
-        name: "b1",
-        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        c: 0,
-      },
-      {
-        type: "x",
-        x: (this.params.X - this.params.C) / 2,
-        show: this.params.showC,
-        name: "c0",
-      },
-      {
-        type: "x",
-        x: this.params.X / 2,
-        show: this.params.showC1,
-        name: "c1",
-      },
-    ];
+    const lines = this.getLines();
 
     const points = {
       alpha: null,
@@ -854,6 +816,47 @@ class CoinsApp extends HTMLElement {
           py - CoinsApp.CONSTANTS.LABEL_OFFSET
         );
     });
+  }
+  getLines() {
+    return [
+      { type: "y", f: (x) => 0, show: true, name: "a0", m: 0, c: 0 },
+      {
+        type: "y",
+        f: (x) => this.params.A,
+        show: this.params.showA,
+        name: "a1",
+        m: 0,
+        c: this.params.A,
+      },
+      {
+        type: "y",
+        f: (x) => (x - this.params.B) / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        show: this.params.showB,
+        name: "b0",
+        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        c: -this.params.B / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+      },
+      {
+        type: "y",
+        f: (x) => x / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        show: true,
+        name: "b1",
+        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        c: 0,
+      },
+      {
+        type: "x",
+        x: (this.params.X - this.params.C) / 2,
+        show: this.params.showC,
+        name: "c0",
+      },
+      {
+        type: "x",
+        x: this.params.X / 2,
+        show: this.params.showC1,
+        name: "c1",
+      },
+    ];
   }
 }
 
