@@ -30,6 +30,15 @@ class CoinsApp extends HTMLElement {
     this.startOffsetY = 0;
   }
 
+  static get CONSTANTS() {
+    return {
+      SLOPE_DENOMINATOR: 5,
+      POINT_RADIUS: 2.5,
+      LABEL_OFFSET: 10,
+      GRID_MIN_SPACING: 20,
+    };
+  }
+
   connectedCallback() {
     this.render();
     this.canvas = this.shadowRoot.getElementById("canvas");
@@ -420,8 +429,11 @@ class CoinsApp extends HTMLElement {
     this.drawLine((x) => 0, "red");
     if (this.params.showA) this.drawLine((x) => this.params.A, "orange");
     if (this.params.showB)
-      this.drawLine((x) => (x - this.params.B) / 5, "green");
-    this.drawLine((x) => x / 5, "blue");
+      this.drawLine(
+        (x) => (x - this.params.B) / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        "green"
+      );
+    this.drawLine((x) => x / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR, "blue");
     if (this.params.showC)
       this.drawVerticalLine((this.params.X - this.params.C) / 2, "purple");
     if (this.params.showC1) this.drawVerticalLine(this.params.X / 2, "magenta");
@@ -440,7 +452,8 @@ class CoinsApp extends HTMLElement {
     const pxEndX = width + 50;
 
     // Calculate grid step to keep lines at least ~20px apart
-    const minPixelSpacing = 20;
+    // Calculate grid step to keep lines at least ~20px apart
+    const minPixelSpacing = CoinsApp.CONSTANTS.GRID_MIN_SPACING;
     let gridStep = 1;
     while (gridStep * this.zoom < minPixelSpacing) {
       if (gridStep === 1) gridStep = 2;
@@ -598,13 +611,20 @@ class CoinsApp extends HTMLElement {
       },
       {
         type: "y",
-        f: (x) => (x - this.params.B) / 5,
+        f: (x) => (x - this.params.B) / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
         show: this.params.showB,
         name: "b0",
-        m: 0.2,
-        c: -this.params.B / 5,
+        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        c: -this.params.B / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
       },
-      { type: "y", f: (x) => x / 5, show: true, name: "b1", m: 0.2, c: 0 },
+      {
+        type: "y",
+        f: (x) => x / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        show: true,
+        name: "b1",
+        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
+        c: 0,
+      },
       {
         type: "x",
         x: (this.params.X - this.params.C) / 2,
@@ -700,9 +720,14 @@ class CoinsApp extends HTMLElement {
       const py = this.params.offsetY - p.y * this.zoom;
 
       ctx.beginPath();
-      ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
+      ctx.arc(px, py, CoinsApp.CONSTANTS.POINT_RADIUS, 0, 2 * Math.PI);
       ctx.fill();
-      if (p.label) ctx.fillText(p.label, px + 10, py - 10);
+      if (p.label)
+        ctx.fillText(
+          p.label,
+          px + CoinsApp.CONSTANTS.LABEL_OFFSET,
+          py - CoinsApp.CONSTANTS.LABEL_OFFSET
+        );
     });
   }
 
@@ -713,13 +738,14 @@ class CoinsApp extends HTMLElement {
     const ctx = this.ctx;
 
     // --- Upper (L_D) Calculation ---
+    const K = CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
     const D_val = xi
-      ? Math.min(5 * this.params.A + this.params.B, Math.floor(xi.x))
+      ? Math.min(K * this.params.A + this.params.B, Math.floor(xi.x))
       : null;
 
     let hD_val = null;
     if (alpha && D_val !== null) {
-      hD_val = Math.max(0, Math.floor((D_val - alpha.x + 5) / 5));
+      hD_val = Math.max(0, Math.floor((D_val - alpha.x + K) / K));
     }
 
     const hDEl = shadow.getElementById("hDResult");
@@ -740,28 +766,36 @@ class CoinsApp extends HTMLElement {
     if (HDEl) {
       let HDText = "H_D= -";
       if (D_val !== null) {
-        const H_D = Math.min(this.params.A, Math.floor(D_val / 5));
+        const H_D = Math.min(this.params.A, Math.floor(D_val / K));
         HDText = `H_D=${H_D}`;
         this.drawLine((x) => H_D, "cyan");
 
         // Draw intersections with b0 and b1
         ctx.fillStyle = "red";
-        // b0: y = (x - params.B) / 5 => x = 5 * y + params.B
-        const x_b0 = 5 * H_D + this.params.B;
+        // b0: y = (x - params.B) / K => x = K * y + params.B
+        const x_b0 = K * H_D + this.params.B;
         const px_b0 = this.params.offsetX + x_b0 * this.zoom;
         const py_H = this.params.offsetY - H_D * this.zoom;
         ctx.beginPath();
-        ctx.arc(px_b0, py_H, 2.5, 0, 2 * Math.PI);
+        ctx.arc(px_b0, py_H, CoinsApp.CONSTANTS.POINT_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
-        ctx.fillText("β", px_b0 + 10, py_H - 10);
+        ctx.fillText(
+          "β",
+          px_b0 + CoinsApp.CONSTANTS.LABEL_OFFSET,
+          py_H - CoinsApp.CONSTANTS.LABEL_OFFSET
+        );
 
-        // b1: y = x / 5 => x = 5 * y
-        const x_b1 = 5 * H_D;
+        // b1: y = x / K => x = K * y
+        const x_b1 = K * H_D;
         const px_b1 = this.params.offsetX + x_b1 * this.zoom;
         ctx.beginPath();
-        ctx.arc(px_b1, py_H, 2.5, 0, 2 * Math.PI);
+        ctx.arc(px_b1, py_H, CoinsApp.CONSTANTS.POINT_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
-        ctx.fillText("δ", px_b1 + 10, py_H - 10);
+        ctx.fillText(
+          "δ",
+          px_b1 + CoinsApp.CONSTANTS.LABEL_OFFSET,
+          py_H - CoinsApp.CONSTANTS.LABEL_OFFSET
+        );
 
         ctx.fillStyle = "black"; // Restore color
 
@@ -785,7 +819,7 @@ class CoinsApp extends HTMLElement {
           const h_D = hD_val;
           const D = D_val;
           const val =
-            ((delta.y - h_D + 1) * (5 * (delta.y + h_D) - 2 * (D - alpha.x))) /
+            ((delta.y - h_D + 1) * (K * (delta.y + h_D) - 2 * (D - alpha.x))) /
             2;
           TD_val = Math.round(val);
           trapText = `T_D=${TD_val}`;
@@ -822,23 +856,23 @@ class CoinsApp extends HTMLElement {
       let lowerLdText = "L_d= -";
       if (eta) {
         const val = Math.min(
-          5 * this.params.A + this.params.B,
+          K * this.params.A + this.params.B,
           Math.max(-1, Math.floor(eta.x + 0.5) - 1)
         );
         dText = `d=${val}`;
 
-        const H_d = Math.min(this.params.A, Math.floor(val / 5));
+        const H_d = Math.min(this.params.A, Math.floor(val / K));
         hdText = `H_d=${H_d}`;
 
         if (alpha) {
-          const h_d = Math.max(0, Math.floor((val - alpha.x + 5) / 5));
+          const h_d = Math.max(0, Math.floor((val - alpha.x + K) / K));
           lowerhdText = `h_d=${h_d}`;
 
           const P_d = Math.round((alpha.x + 1) * (H_d + 1));
           lowerPdText = `P_d=${P_d}`;
 
           const T_d = Math.round(
-            ((H_d - h_d + 1) * (5 * (H_d + h_d) - 2 * (val - alpha.x))) / 2
+            ((H_d - h_d + 1) * (K * (H_d + h_d) - 2 * (val - alpha.x))) / 2
           );
           lowerTdText = `T_d=${T_d}`;
 
