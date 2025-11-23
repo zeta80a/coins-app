@@ -50,98 +50,9 @@ class CoinsApp extends HTMLElement {
 
   render() {
     this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          position: relative;
-          width: 100%;
-          height: 100vh;
-          overflow: hidden;
-        }
-        /* Canvas Container */
-        #canvas-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          width: 100%;
-          height: calc(100% - 40px);
-        }
-        #finalResultContainer {
-          text-align: center;
-          font-size: 18px;
-          font-weight: bold;
-          padding: 10px;
-          background: #f0f0f0;
-          border-top: 1px solid #ccc;
-        }
-        canvas {
-          border: 1px solid black;
-          cursor: grab;
-          display: block;
-          background: white;
-        }
-
-        /* Panels */
-        #mainPanelWrapper {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          z-index: 9999;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          font-family: sans-serif;
-        }
-        label {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          margin-bottom: 6px;
-        }
-        input[type="number"] {
-          width: 56px;
-        }
-        input[type="checkbox"] {
-          margin-left: 6px;
-        }
-        #guiContent {
-          display: none;
-        }
-        #resultPanelWrapper {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          z-index: 9999;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          font-family: sans-serif;
-          display: block;
-        }
-        #resultContent {
-          display: block;
-        }
-        #ldPanelWrapper {
-          position: absolute;
-          top: 10px;
-          right: 110px;
-          z-index: 9999;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          font-family: sans-serif;
-          display: block;
-        }
-        #ldContent {
-          display: block;
-        }
-      </style>
+      <link rel="stylesheet" href="${
+        new URL("./coins-app.css", import.meta.url).href
+      }">
 
       <!-- Canvas -->
       <div id="canvas-container">
@@ -218,12 +129,12 @@ class CoinsApp extends HTMLElement {
       <div id="resultPanelWrapper">
         <button id="toggleResult">L_D</button>
         <div id="resultContent">
-          <div id="dResult" style="margin-top: 10px; font-weight: bold"></div>
-          <div id="HDResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="hDResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="calcResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="trapezoidResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="ldResult" style="margin-top: 5px; font-weight: bold; color: blue;"></div>
+          <div id="dResult" class="result-row-large"></div>
+          <div id="HDResult" class="result-row"></div>
+          <div id="hDResult" class="result-row"></div>
+          <div id="calcResult" class="result-row"></div>
+          <div id="trapezoidResult" class="result-row"></div>
+          <div id="ldResult" class="result-row result-highlight"></div>
         </div>
       </div>
 
@@ -231,12 +142,12 @@ class CoinsApp extends HTMLElement {
       <div id="ldPanelWrapper">
         <button id="toggleLd">L_d</button>
         <div id="ldContent">
-          <div id="lowerDResult" style="margin-top: 10px; font-weight: bold"></div>
-          <div id="lowerHdResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="lowerhdResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="lowerPdResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="lowerTdResult" style="margin-top: 5px; font-weight: bold"></div>
-          <div id="lowerLdResult" style="margin-top: 5px; font-weight: bold; color: blue;"></div>
+          <div id="lowerDResult" class="result-row-large"></div>
+          <div id="lowerHdResult" class="result-row"></div>
+          <div id="lowerhdResult" class="result-row"></div>
+          <div id="lowerPdResult" class="result-row"></div>
+          <div id="lowerTdResult" class="result-row"></div>
+          <div id="lowerLdResult" class="result-row result-highlight"></div>
         </div>
       </div>
     `;
@@ -452,6 +363,11 @@ class CoinsApp extends HTMLElement {
   }
 
   drawGrid() {
+    this.drawGridLines();
+    this.drawAxisLabels();
+  }
+
+  drawGridLines() {
     const ctx = this.ctx;
     const { width, height } = this.canvas;
 
@@ -462,7 +378,6 @@ class CoinsApp extends HTMLElement {
     const pxStartX = -50;
     const pxEndX = width + 50;
 
-    // Calculate grid step to keep lines at least ~20px apart
     // Calculate grid step to keep lines at least ~20px apart
     const minPixelSpacing = CoinsApp.CONSTANTS.GRID_MIN_SPACING;
     let gridStep = 1;
@@ -507,6 +422,15 @@ class CoinsApp extends HTMLElement {
     ctx.stroke();
 
     ctx.setLineDash([]);
+  }
+
+  drawAxisLabels() {
+    const ctx = this.ctx;
+    const { width, height } = this.canvas;
+    const pxStartX = -50;
+    const pxEndX = width + 50;
+    const pyStartY = -50;
+    const pyEndY = height + 50;
 
     ctx.fillStyle = "black";
     ctx.font = "12px sans-serif";
@@ -614,11 +538,202 @@ class CoinsApp extends HTMLElement {
     // Calculate intersections
     const { points, lines } = this.calculateIntersections();
 
-    // Draw intersections
+    // Calculate metrics (values and dynamic points)
+    const metrics = this.calculateMetrics(points);
+
+    // Draw static intersections
     this.drawIntersectionPoints(points);
 
-    // Update results
-    this.updateResults(points);
+    // Draw dynamic elements (H_D line, beta, delta)
+    this.drawDynamicElements(metrics);
+
+    // Update DOM results
+    this.updateResultPanel(metrics);
+  }
+
+  calculateMetrics(points) {
+    const { alpha, xi, eta } = points;
+    const K = CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
+    const metrics = {
+      D: null,
+      H_D: null,
+      h_D: null,
+      P_D: null,
+      T_D: null,
+      L_D: null,
+      d: null,
+      H_d: null,
+      h_d: null,
+      P_d: null,
+      T_d: null,
+      L_d: null,
+      finalResult: null,
+      dynamicPoints: { beta: null, delta: null },
+    };
+
+    // --- Upper (L_D) Calculation ---
+    if (xi) {
+      metrics.D = Math.min(K * this.params.A + this.params.B, Math.floor(xi.x));
+    }
+
+    if (alpha && metrics.D !== null) {
+      metrics.h_D = Math.max(0, Math.floor((metrics.D - alpha.x + K) / K));
+    }
+
+    if (metrics.D !== null) {
+      metrics.H_D = Math.min(this.params.A, Math.floor(metrics.D / K));
+
+      // Calculate beta and delta coordinates
+      // b0: x = K * y + B
+      const x_b0 = K * metrics.H_D + this.params.B;
+      metrics.dynamicPoints.beta = { x: x_b0, y: metrics.H_D };
+
+      // b1: x = K * y
+      const x_b1 = K * metrics.H_D;
+      metrics.dynamicPoints.delta = { x: x_b1, y: metrics.H_D };
+    }
+
+    const delta = metrics.dynamicPoints.delta;
+    if (alpha && delta) {
+      metrics.P_D = Math.round((alpha.x + 1) * (delta.y + 1));
+    }
+
+    if (metrics.h_D !== null && metrics.D !== null && alpha && delta) {
+      const val =
+        ((delta.y - metrics.h_D + 1) *
+          (K * (delta.y + metrics.h_D) - 2 * (metrics.D - alpha.x))) /
+        2;
+      metrics.T_D = Math.round(val);
+    }
+
+    if (metrics.P_D !== null && metrics.T_D !== null) {
+      metrics.L_D = metrics.P_D - metrics.T_D;
+    }
+
+    // --- Lower (L_d) Calculation ---
+    if (eta) {
+      const val = Math.min(
+        K * this.params.A + this.params.B,
+        Math.max(-1, Math.floor(eta.x + 0.5) - 1)
+      );
+      metrics.d = val;
+      metrics.H_d = Math.min(this.params.A, Math.floor(val / K));
+
+      if (alpha) {
+        metrics.h_d = Math.max(0, Math.floor((val - alpha.x + K) / K));
+        metrics.P_d = Math.round((alpha.x + 1) * (metrics.H_d + 1));
+        metrics.T_d = Math.round(
+          ((metrics.H_d - metrics.h_d + 1) *
+            (K * (metrics.H_d + metrics.h_d) - 2 * (val - alpha.x))) /
+            2
+        );
+        metrics.L_d = metrics.P_d - metrics.T_d;
+      }
+    }
+
+    // --- Final Result ---
+    if (metrics.L_D !== null && metrics.L_d !== null) {
+      metrics.finalResult = metrics.L_D - metrics.L_d;
+    }
+
+    return metrics;
+  }
+
+  drawDynamicElements(metrics) {
+    if (metrics.H_D === null) return;
+
+    const ctx = this.ctx;
+    const { beta, delta } = metrics.dynamicPoints;
+
+    // Draw H_D line
+    this.drawHorizontalLine(metrics.H_D, "cyan");
+
+    ctx.fillStyle = "red";
+    ctx.font = "12px sans-serif";
+
+    // Draw beta
+    if (beta) {
+      const px = this.params.offsetX + beta.x * this.zoom;
+      const py = this.params.offsetY - beta.y * this.zoom;
+      ctx.beginPath();
+      ctx.arc(px, py, CoinsApp.CONSTANTS.POINT_RADIUS, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillText(
+        "β",
+        px + CoinsApp.CONSTANTS.LABEL_OFFSET,
+        py - CoinsApp.CONSTANTS.LABEL_OFFSET
+      );
+    }
+
+    // Draw delta
+    if (delta) {
+      const px = this.params.offsetX + delta.x * this.zoom;
+      const py = this.params.offsetY - delta.y * this.zoom;
+      ctx.beginPath();
+      ctx.arc(px, py, CoinsApp.CONSTANTS.POINT_RADIUS, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.fillText(
+        "δ",
+        px + CoinsApp.CONSTANTS.LABEL_OFFSET,
+        py - CoinsApp.CONSTANTS.LABEL_OFFSET
+      );
+    }
+
+    ctx.fillStyle = "black"; // Restore
+  }
+
+  updateResultPanel(metrics) {
+    const shadow = this.shadowRoot;
+
+    const setText = (id, text) => {
+      const el = shadow.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    // Upper Panel
+    setText("dResult", metrics.D !== null ? `D=${metrics.D}` : "D= -");
+    setText("hDResult", metrics.h_D !== null ? `h_D=${metrics.h_D}` : "h_D= -");
+    setText("HDResult", metrics.H_D !== null ? `H_D=${metrics.H_D}` : "H_D= -");
+    setText(
+      "calcResult",
+      metrics.P_D !== null ? `P_D=${metrics.P_D}` : "P_D= -"
+    );
+    setText(
+      "trapezoidResult",
+      metrics.T_D !== null ? `T_D=${metrics.T_D}` : "T_D= -"
+    );
+    setText("ldResult", metrics.L_D !== null ? `L_D=${metrics.L_D}` : "L_D= -");
+
+    // Lower Panel
+    setText("lowerDResult", metrics.d !== null ? `d=${metrics.d}` : "d= -");
+    setText(
+      "lowerHdResult",
+      metrics.H_d !== null ? `H_d=${metrics.H_d}` : "H_d= -"
+    );
+    setText(
+      "lowerhdResult",
+      metrics.h_d !== null ? `h_d=${metrics.h_d}` : "h_d= -"
+    );
+    setText(
+      "lowerPdResult",
+      metrics.P_d !== null ? `P_d=${metrics.P_d}` : "P_d= -"
+    );
+    setText(
+      "lowerTdResult",
+      metrics.T_d !== null ? `T_d=${metrics.T_d}` : "T_d= -"
+    );
+    setText(
+      "lowerLdResult",
+      metrics.L_d !== null ? `L_d=${metrics.L_d}` : "L_d= -"
+    );
+
+    // Final Result
+    setText(
+      "finalResultContainer",
+      metrics.finalResult !== null
+        ? `解の格子の個数 = ${metrics.finalResult}`
+        : "解の格子の個数 = -"
+    );
   }
 
   calculateIntersections() {
@@ -739,174 +854,6 @@ class CoinsApp extends HTMLElement {
           py - CoinsApp.CONSTANTS.LABEL_OFFSET
         );
     });
-  }
-
-  updateResults(points) {
-    const { alpha, xi, eta } = points;
-    let { delta } = points;
-    const shadow = this.shadowRoot;
-    const ctx = this.ctx;
-
-    // --- Upper (L_D) Calculation ---
-    const K = CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
-    const D_val = xi
-      ? Math.min(K * this.params.A + this.params.B, Math.floor(xi.x))
-      : null;
-
-    let hD_val = null;
-    if (alpha && D_val !== null) {
-      hD_val = Math.max(0, Math.floor((D_val - alpha.x + K) / K));
-    }
-
-    const hDEl = shadow.getElementById("hDResult");
-    if (hDEl) {
-      hDEl.textContent = hD_val !== null ? `h_D=${hD_val}` : "h_D= -";
-    }
-
-    const dEl = shadow.getElementById("dResult");
-    if (dEl) {
-      dEl.textContent = D_val !== null ? `D=${D_val}` : "D= -";
-    }
-
-    let LD_val = null; // Store for final result
-    let PD_val = null;
-    let TD_val = null;
-
-    const HDEl = shadow.getElementById("HDResult");
-    if (HDEl) {
-      let HDText = "H_D= -";
-      if (D_val !== null) {
-        const H_D = Math.min(this.params.A, Math.floor(D_val / K));
-        HDText = `H_D=${H_D}`;
-        this.drawHorizontalLine(H_D, "cyan");
-
-        // Draw intersections with b0 and b1
-        ctx.fillStyle = "red";
-        // b0: y = (x - params.B) / K => x = K * y + params.B
-        const x_b0 = K * H_D + this.params.B;
-        const px_b0 = this.params.offsetX + x_b0 * this.zoom;
-        const py_H = this.params.offsetY - H_D * this.zoom;
-        ctx.beginPath();
-        ctx.arc(px_b0, py_H, CoinsApp.CONSTANTS.POINT_RADIUS, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillText(
-          "β",
-          px_b0 + CoinsApp.CONSTANTS.LABEL_OFFSET,
-          py_H - CoinsApp.CONSTANTS.LABEL_OFFSET
-        );
-
-        // b1: y = x / K => x = K * y
-        const x_b1 = K * H_D;
-        const px_b1 = this.params.offsetX + x_b1 * this.zoom;
-        ctx.beginPath();
-        ctx.arc(px_b1, py_H, CoinsApp.CONSTANTS.POINT_RADIUS, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillText(
-          "δ",
-          px_b1 + CoinsApp.CONSTANTS.LABEL_OFFSET,
-          py_H - CoinsApp.CONSTANTS.LABEL_OFFSET
-        );
-
-        ctx.fillStyle = "black"; // Restore color
-
-        // Set new delta for calculations
-        delta = { x: x_b1, y: H_D };
-      }
-      HDEl.textContent = HDText;
-
-      // Calculate result with new delta
-      PD_val =
-        alpha && delta ? Math.round((alpha.x + 1) * (delta.y + 1)) : null;
-      const resultText = PD_val !== null ? `P_D=${PD_val}` : "P_D= -";
-
-      const calcEl = shadow.getElementById("calcResult");
-      if (calcEl) calcEl.textContent = resultText;
-
-      const trapEl = shadow.getElementById("trapezoidResult");
-      if (trapEl) {
-        let trapText = "T_D= -";
-        if (hD_val !== null && D_val !== null && alpha && delta) {
-          const h_D = hD_val;
-          const D = D_val;
-          const val =
-            ((delta.y - h_D + 1) * (K * (delta.y + h_D) - 2 * (D - alpha.x))) /
-            2;
-          TD_val = Math.round(val);
-          trapText = `T_D=${TD_val}`;
-        }
-        trapEl.textContent = trapText;
-      }
-
-      const ldEl = shadow.getElementById("ldResult");
-      if (ldEl) {
-        let ldText = "L_D= -";
-        if (PD_val !== null && TD_val !== null) {
-          LD_val = PD_val - TD_val;
-          ldText = `L_D=${LD_val}`;
-        }
-        ldEl.textContent = ldText;
-      }
-    }
-
-    // --- Lower (L_d) Calculation ---
-    let Ld_val = null; // Store for final result
-
-    const lowerDEl = shadow.getElementById("lowerDResult");
-    const lowerHdEl = shadow.getElementById("lowerHdResult");
-    const lowerhdEl = shadow.getElementById("lowerhdResult");
-    const lowerPdEl = shadow.getElementById("lowerPdResult");
-    const lowerTdEl = shadow.getElementById("lowerTdResult");
-    const lowerLdEl = shadow.getElementById("lowerLdResult");
-    if (lowerDEl) {
-      let dText = "d= -";
-      let hdText = "H_d= -";
-      let lowerhdText = "h_d= -";
-      let lowerPdText = "P_d= -";
-      let lowerTdText = "T_d= -";
-      let lowerLdText = "L_d= -";
-      if (eta) {
-        const val = Math.min(
-          K * this.params.A + this.params.B,
-          Math.max(-1, Math.floor(eta.x + 0.5) - 1)
-        );
-        dText = `d=${val}`;
-
-        const H_d = Math.min(this.params.A, Math.floor(val / K));
-        hdText = `H_d=${H_d}`;
-
-        if (alpha) {
-          const h_d = Math.max(0, Math.floor((val - alpha.x + K) / K));
-          lowerhdText = `h_d=${h_d}`;
-
-          const P_d = Math.round((alpha.x + 1) * (H_d + 1));
-          lowerPdText = `P_d=${P_d}`;
-
-          const T_d = Math.round(
-            ((H_d - h_d + 1) * (K * (H_d + h_d) - 2 * (val - alpha.x))) / 2
-          );
-          lowerTdText = `T_d=${T_d}`;
-
-          Ld_val = P_d - T_d;
-          lowerLdText = `L_d=${Ld_val}`;
-        }
-      }
-      lowerDEl.textContent = dText;
-      if (lowerHdEl) lowerHdEl.textContent = hdText;
-      if (lowerhdEl) lowerhdEl.textContent = lowerhdText;
-      if (lowerPdEl) lowerPdEl.textContent = lowerPdText;
-      if (lowerTdEl) lowerTdEl.textContent = lowerTdText;
-      if (lowerLdEl) lowerLdEl.textContent = lowerLdText;
-    }
-
-    // --- Final Result ---
-    const finalResultEl = shadow.getElementById("finalResultContainer");
-    if (finalResultEl) {
-      let finalText = "解の格子の個数 = -";
-      if (LD_val !== null && Ld_val !== null) {
-        finalText = `解の格子の個数 = ${LD_val - Ld_val}`;
-      }
-      finalResultEl.textContent = finalText;
-    }
   }
 }
 
