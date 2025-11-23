@@ -426,14 +426,15 @@ class CoinsApp extends HTMLElement {
     this.ctx.clearRect(0, 0, width, height);
     this.drawGrid();
     this.drawAxes();
-    this.drawLine((x) => 0, "red");
-    if (this.params.showA) this.drawLine((x) => this.params.A, "orange");
+    this.drawLinearFunction(0, 0, "red"); // y = 0
+    if (this.params.showA) this.drawLinearFunction(0, this.params.A, "orange"); // y = A
+
+    const slope = 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
     if (this.params.showB)
-      this.drawLine(
-        (x) => (x - this.params.B) / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        "green"
-      );
-    this.drawLine((x) => x / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR, "blue");
+      this.drawLinearFunction(slope, -this.params.B * slope, "green"); // y = (x - B)/5
+
+    this.drawLinearFunction(slope, 0, "blue"); // y = x/5
+
     if (this.params.showC)
       this.drawVerticalLine((this.params.X - this.params.C) / 2, "purple");
     if (this.params.showC1) this.drawVerticalLine(this.params.X / 2, "magenta");
@@ -553,26 +554,38 @@ class CoinsApp extends HTMLElement {
     ctx.stroke();
   }
 
-  drawLine(f, color = "red") {
+  /**
+   * Draws a linear function y = mx + c
+   */
+  drawLinearFunction(m, c, color = "red") {
     const ctx = this.ctx;
-    const { width } = this.canvas;
+    const { width, height } = this.canvas;
+
+    // Calculate visible world bounds
+    const worldXMin = (0 - this.params.offsetX) / this.zoom;
+    const worldXMax = (width - this.params.offsetX) / this.zoom;
+
+    // Calculate y at boundaries
+    const y1 = m * worldXMin + c;
+    const y2 = m * worldXMax + c;
+
+    // Convert to pixel coordinates
+    const px1 = 0;
+    const py1 = this.params.offsetY - y1 * this.zoom;
+    const px2 = width;
+    const py2 = this.params.offsetY - y2 * this.zoom;
+
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    const step = Math.max(1, Math.round(1 / Math.max(this.zoom, 0.0001)));
-    let started = false;
-    for (let px = 0; px <= width; px += step) {
-      const x = (px - this.params.offsetX) / this.zoom;
-      const y = f(x);
-      const py = this.params.offsetY - y * this.zoom;
-      if (!started) {
-        ctx.moveTo(px, py);
-        started = true;
-      } else {
-        ctx.lineTo(px, py);
-      }
-    }
+    ctx.moveTo(px1, py1);
+    ctx.lineTo(px2, py2);
     ctx.stroke();
+  }
+
+  // Kept for H_D line drawing which is horizontal (m=0)
+  drawHorizontalLine(y, color) {
+    this.drawLinearFunction(0, y, color);
   }
 
   drawVerticalLine(x, color = "blue") {
@@ -669,39 +682,26 @@ class CoinsApp extends HTMLElement {
         }
 
         const point = { x, y, label: "" };
+        const key = [l1.name, l2.name].sort().join("-");
 
-        if (
-          (l1.name === "a0" && l2.name === "b1") ||
-          (l1.name === "b1" && l2.name === "a0")
-        )
-          point.label = "γ";
-        else if (
-          (l1.name === "a0" && l2.name === "b0") ||
-          (l1.name === "b0" && l2.name === "a0")
-        ) {
-          point.label = "α";
-          points.alpha = { x, y };
-        } else if (
-          (l1.name === "a1" && l2.name === "b1") ||
-          (l1.name === "b1" && l2.name === "a1")
-        ) {
-          // point.label = "δ"; // Handled specially later
-        } else if (
-          (l1.name === "a1" && l2.name === "b0") ||
-          (l1.name === "b0" && l2.name === "a1")
-        );
-        else if (
-          (l1.name === "a1" && l2.name === "c1") ||
-          (l1.name === "c1" && l2.name === "a1")
-        ) {
-          point.label = "ξ";
-          points.xi = { x, y };
-        } else if (
-          (l1.name === "c0" && l2.name === "a1") ||
-          (l1.name === "a1" && l2.name === "c0")
-        ) {
-          point.label = "η";
-          points.eta = { x, y };
+        switch (key) {
+          case "a0-b1":
+            point.label = "γ";
+            break;
+          case "a0-b0":
+            point.label = "α";
+            points.alpha = { x, y };
+            break;
+          case "a1-c1":
+            point.label = "ξ";
+            points.xi = { x, y };
+            break;
+          case "a1-c0":
+            point.label = "η";
+            points.eta = { x, y };
+            break;
+          // case "a1-b1": point.label = "δ"; break; // Handled specially
+          // case "a1-b0": point.label = "β"; break; // Handled specially
         }
 
         points.others.push(point);
@@ -768,7 +768,7 @@ class CoinsApp extends HTMLElement {
       if (D_val !== null) {
         const H_D = Math.min(this.params.A, Math.floor(D_val / K));
         HDText = `H_D=${H_D}`;
-        this.drawLine((x) => H_D, "cyan");
+        this.drawHorizontalLine(H_D, "cyan");
 
         // Draw intersections with b0 and b1
         ctx.fillStyle = "red";
