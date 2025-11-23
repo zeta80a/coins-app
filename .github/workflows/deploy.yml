@@ -36,6 +36,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Create stable artifacts
+        run: |
+          cp dist/coins-app.*.js dist/coins-app.js
+          cp dist/coins-app.*.css dist/style.css
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
