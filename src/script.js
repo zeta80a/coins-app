@@ -575,8 +575,17 @@ class CoinsApp extends HTMLElement {
   }
 
   drawIntersections() {
-    const ctx = this.ctx;
-    const { width } = this.canvas;
+    // Calculate intersections
+    const { points, lines } = this.calculateIntersections();
+
+    // Draw intersections
+    this.drawIntersectionPoints(points);
+
+    // Update results
+    this.updateResults(points);
+  }
+
+  calculateIntersections() {
     const lines = [
       { type: "y", f: (x) => 0, show: true, name: "a0", m: 0, c: 0 },
       {
@@ -609,12 +618,14 @@ class CoinsApp extends HTMLElement {
         name: "c1",
       },
     ];
-    let alpha = null,
-      delta = null,
-      xi = null,
-      eta = null;
-    ctx.fillStyle = "black";
-    ctx.font = "12px sans-serif";
+
+    const points = {
+      alpha: null,
+      delta: null, // Will be calculated in updateResults if needed (beta/delta logic)
+      xi: null,
+      eta: null,
+      others: [],
+    };
 
     for (let i = 0; i < lines.length; i++) {
       for (let j = i + 1; j < lines.length; j++) {
@@ -637,29 +648,24 @@ class CoinsApp extends HTMLElement {
           continue; // Both x lines (parallel)
         }
 
-        const px = this.params.offsetX + x * this.zoom,
-          py = this.params.offsetY - y * this.zoom;
+        const point = { x, y, label: "" };
 
-        ctx.beginPath();
-        ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
-        ctx.fill();
-        let label = "";
         if (
           (l1.name === "a0" && l2.name === "b1") ||
           (l1.name === "b1" && l2.name === "a0")
         )
-          label = "γ";
+          point.label = "γ";
         else if (
           (l1.name === "a0" && l2.name === "b0") ||
           (l1.name === "b0" && l2.name === "a0")
         ) {
-          label = "α";
-          alpha = { x, y };
+          point.label = "α";
+          points.alpha = { x, y };
         } else if (
           (l1.name === "a1" && l2.name === "b1") ||
           (l1.name === "b1" && l2.name === "a1")
         ) {
-          // label = "δ";
+          // point.label = "δ"; // Handled specially later
         } else if (
           (l1.name === "a1" && l2.name === "b0") ||
           (l1.name === "b0" && l2.name === "a1")
@@ -668,23 +674,45 @@ class CoinsApp extends HTMLElement {
           (l1.name === "a1" && l2.name === "c1") ||
           (l1.name === "c1" && l2.name === "a1")
         ) {
-          // label = "β";
-          label = "ξ";
-          xi = { x, y };
+          point.label = "ξ";
+          points.xi = { x, y };
         } else if (
           (l1.name === "c0" && l2.name === "a1") ||
           (l1.name === "a1" && l2.name === "c0")
         ) {
-          label = "η";
-          eta = { x, y };
+          point.label = "η";
+          points.eta = { x, y };
         }
-        if (label) ctx.fillText(label, px + 10, py - 10);
+
+        points.others.push(point);
       }
     }
+    return { points, lines };
+  }
 
-    // --- Result Calculation & Update ---
+  drawIntersectionPoints(points) {
+    const ctx = this.ctx;
+    ctx.fillStyle = "black";
+    ctx.font = "12px sans-serif";
+
+    points.others.forEach((p) => {
+      const px = this.params.offsetX + p.x * this.zoom;
+      const py = this.params.offsetY - p.y * this.zoom;
+
+      ctx.beginPath();
+      ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
+      ctx.fill();
+      if (p.label) ctx.fillText(p.label, px + 10, py - 10);
+    });
+  }
+
+  updateResults(points) {
+    const { alpha, xi, eta } = points;
+    let { delta } = points;
     const shadow = this.shadowRoot;
+    const ctx = this.ctx;
 
+    // --- Upper (L_D) Calculation ---
     const D_val = xi
       ? Math.min(5 * this.params.A + this.params.B, Math.floor(xi.x))
       : null;
@@ -703,6 +731,10 @@ class CoinsApp extends HTMLElement {
     if (dEl) {
       dEl.textContent = D_val !== null ? `D=${D_val}` : "D= -";
     }
+
+    let LD_val = null; // Store for final result
+    let PD_val = null;
+    let TD_val = null;
 
     const HDEl = shadow.getElementById("HDResult");
     if (HDEl) {
@@ -739,14 +771,13 @@ class CoinsApp extends HTMLElement {
       HDEl.textContent = HDText;
 
       // Calculate result with new delta
-      const PD_val =
+      PD_val =
         alpha && delta ? Math.round((alpha.x + 1) * (delta.y + 1)) : null;
       const resultText = PD_val !== null ? `P_D=${PD_val}` : "P_D= -";
 
       const calcEl = shadow.getElementById("calcResult");
       if (calcEl) calcEl.textContent = resultText;
 
-      let TD_val = null;
       const trapEl = shadow.getElementById("trapezoidResult");
       if (trapEl) {
         let trapText = "T_D= -";
@@ -766,90 +797,71 @@ class CoinsApp extends HTMLElement {
       if (ldEl) {
         let ldText = "L_D= -";
         if (PD_val !== null && TD_val !== null) {
-          ldText = `L_D=${PD_val - TD_val}`;
+          LD_val = PD_val - TD_val;
+          ldText = `L_D=${LD_val}`;
         }
         ldEl.textContent = ldText;
       }
+    }
 
-      const lowerDEl = shadow.getElementById("lowerDResult");
-      const lowerHdEl = shadow.getElementById("lowerHdResult");
-      const lowerhdEl = shadow.getElementById("lowerhdResult");
-      const lowerPdEl = shadow.getElementById("lowerPdResult");
-      const lowerTdEl = shadow.getElementById("lowerTdResult");
-      const lowerLdEl = shadow.getElementById("lowerLdResult");
-      if (lowerDEl) {
-        let dText = "d= -";
-        let hdText = "H_d= -";
-        let lowerhdText = "h_d= -";
-        let lowerPdText = "P_d= -";
-        let lowerTdText = "T_d= -";
-        let lowerLdText = "L_d= -";
-        if (eta) {
-          const val = Math.min(
-            5 * this.params.A + this.params.B,
-            Math.max(-1, Math.floor(eta.x + 0.5) - 1)
-          );
-          dText = `d=${val}`;
+    // --- Lower (L_d) Calculation ---
+    let Ld_val = null; // Store for final result
 
-          const H_d = Math.min(this.params.A, Math.floor(val / 5));
-          hdText = `H_d=${H_d}`;
+    const lowerDEl = shadow.getElementById("lowerDResult");
+    const lowerHdEl = shadow.getElementById("lowerHdResult");
+    const lowerhdEl = shadow.getElementById("lowerhdResult");
+    const lowerPdEl = shadow.getElementById("lowerPdResult");
+    const lowerTdEl = shadow.getElementById("lowerTdResult");
+    const lowerLdEl = shadow.getElementById("lowerLdResult");
+    if (lowerDEl) {
+      let dText = "d= -";
+      let hdText = "H_d= -";
+      let lowerhdText = "h_d= -";
+      let lowerPdText = "P_d= -";
+      let lowerTdText = "T_d= -";
+      let lowerLdText = "L_d= -";
+      if (eta) {
+        const val = Math.min(
+          5 * this.params.A + this.params.B,
+          Math.max(-1, Math.floor(eta.x + 0.5) - 1)
+        );
+        dText = `d=${val}`;
 
-          if (alpha) {
-            const h_d = Math.max(0, Math.floor((val - alpha.x + 5) / 5));
-            lowerhdText = `h_d=${h_d}`;
+        const H_d = Math.min(this.params.A, Math.floor(val / 5));
+        hdText = `H_d=${H_d}`;
 
-            const P_d = Math.round((alpha.x + 1) * (H_d + 1));
-            lowerPdText = `P_d=${P_d}`;
-
-            const T_d = Math.round(
-              ((H_d - h_d + 1) * (5 * (H_d + h_d) - 2 * (val - alpha.x))) / 2
-            );
-            lowerTdText = `T_d=${T_d}`;
-
-            const L_d = P_d - T_d;
-            lowerLdText = `L_d=${L_d}`;
-          }
-        }
-        lowerDEl.textContent = dText;
-        if (lowerHdEl) lowerHdEl.textContent = hdText;
-        if (lowerhdEl) lowerhdEl.textContent = lowerhdText;
-        if (lowerPdEl) lowerPdEl.textContent = lowerPdText;
-        if (lowerTdEl) lowerTdEl.textContent = lowerTdText;
-        if (lowerLdEl) lowerLdEl.textContent = lowerLdText;
-      }
-
-      // Final Result
-      const finalResultEl = shadow.getElementById("finalResultContainer");
-      if (finalResultEl) {
-        let finalText = "解の格子の個数 = -";
-        let LD_val = null;
-        let Ld_val = null;
-
-        // Re-calculate LD_val (Upper)
-        if (PD_val !== null && TD_val !== null) {
-          LD_val = PD_val - TD_val;
-        }
-
-        // Re-calculate Ld_val (Lower)
-        if (eta && alpha) {
-          const val = Math.min(
-            5 * this.params.A + this.params.B,
-            Math.max(-1, Math.floor(eta.x + 0.5) - 1)
-          );
-          const H_d = Math.min(this.params.A, Math.floor(val / 5));
+        if (alpha) {
           const h_d = Math.max(0, Math.floor((val - alpha.x + 5) / 5));
+          lowerhdText = `h_d=${h_d}`;
+
           const P_d = Math.round((alpha.x + 1) * (H_d + 1));
+          lowerPdText = `P_d=${P_d}`;
+
           const T_d = Math.round(
             ((H_d - h_d + 1) * (5 * (H_d + h_d) - 2 * (val - alpha.x))) / 2
           );
-          Ld_val = P_d - T_d;
-        }
+          lowerTdText = `T_d=${T_d}`;
 
-        if (LD_val !== null && Ld_val !== null) {
-          finalText = `解の格子の個数 = ${LD_val - Ld_val}`;
+          Ld_val = P_d - T_d;
+          lowerLdText = `L_d=${Ld_val}`;
         }
-        finalResultEl.textContent = finalText;
       }
+      lowerDEl.textContent = dText;
+      if (lowerHdEl) lowerHdEl.textContent = hdText;
+      if (lowerhdEl) lowerhdEl.textContent = lowerhdText;
+      if (lowerPdEl) lowerPdEl.textContent = lowerPdText;
+      if (lowerTdEl) lowerTdEl.textContent = lowerTdText;
+      if (lowerLdEl) lowerLdEl.textContent = lowerLdText;
+    }
+
+    // --- Final Result ---
+    const finalResultEl = shadow.getElementById("finalResultContainer");
+    if (finalResultEl) {
+      let finalText = "解の格子の個数 = -";
+      if (LD_val !== null && Ld_val !== null) {
+        finalText = `解の格子の個数 = ${LD_val - Ld_val}`;
+      }
+      finalResultEl.textContent = finalText;
     }
   }
 }
