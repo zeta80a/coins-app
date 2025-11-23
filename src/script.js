@@ -8,13 +8,13 @@ class CoinsApp extends HTMLElement {
 
     // Internal State (previously global params)
     this.params = {
-      A: 4,
-      B: 10,
+      A: 30,
+      B: 40,
       C: 50,
-      X: 64,
-      zoomPercent: 1360,
-      offsetX: 75,
-      offsetY: 285,
+      X: 120,
+      zoomPercent: 1363,
+      offsetX: -315,
+      offsetY: 217,
       showA: true,
       showB: true,
       showC: true,
@@ -438,10 +438,27 @@ class CoinsApp extends HTMLElement {
 
     const pxStartX = -50;
     const pxEndX = width + 50;
-    const worldXStart = Math.ceil((pxStartX - this.params.offsetX) / this.zoom);
-    const worldXEnd = Math.floor((pxEndX - this.params.offsetX) / this.zoom);
+
+    // Calculate grid step to keep lines at least ~20px apart
+    const minPixelSpacing = 20;
+    let gridStep = 1;
+    while (gridStep * this.zoom < minPixelSpacing) {
+      if (gridStep === 1) gridStep = 2;
+      else if (gridStep === 2) gridStep = 5;
+      else if (gridStep === 5) gridStep = 10;
+      else gridStep += 10; // Simple increment for larger steps, or could use powers of 10
+    }
+
+    // Align start to gridStep
+    const worldXStart =
+      Math.ceil((pxStartX - this.params.offsetX) / this.zoom / gridStep) *
+      gridStep;
+    const worldXEnd =
+      Math.floor((pxEndX - this.params.offsetX) / this.zoom / gridStep) *
+      gridStep;
+
     ctx.beginPath();
-    for (let wx = worldXStart; wx <= worldXEnd; wx++) {
+    for (let wx = worldXStart; wx <= worldXEnd; wx += gridStep) {
       const px = Math.round(this.params.offsetX + wx * this.zoom) + 0.5;
       ctx.moveTo(px, 0);
       ctx.lineTo(px, height);
@@ -450,10 +467,15 @@ class CoinsApp extends HTMLElement {
 
     const pyStartY = -50;
     const pyEndY = height + 50;
-    const worldYStart = Math.ceil((this.params.offsetY - pyEndY) / this.zoom);
-    const worldYEnd = Math.floor((this.params.offsetY - pyStartY) / this.zoom);
+    const worldYStart =
+      Math.ceil((this.params.offsetY - pyEndY) / this.zoom / gridStep) *
+      gridStep;
+    const worldYEnd =
+      Math.floor((this.params.offsetY - pyStartY) / this.zoom / gridStep) *
+      gridStep;
+
     ctx.beginPath();
-    for (let wy = worldYStart; wy <= worldYEnd; wy++) {
+    for (let wy = worldYStart; wy <= worldYEnd; wy += gridStep) {
       const py = Math.round(this.params.offsetY - wy * this.zoom) + 0.5;
       ctx.moveTo(0, py);
       ctx.lineTo(width, py);
