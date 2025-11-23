@@ -530,8 +530,8 @@ class ControlPanel extends HTMLElement {
         }
         #ldPanelWrapper {
           position: fixed;
-          top: 200px;
-          right: 10px;
+          top: 10px;
+          right: 220px;
           z-index: 9999;
           background: rgba(255, 255, 255, 0.95);
           padding: 10px;
