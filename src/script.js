@@ -55,7 +55,15 @@ class CoinsApp extends HTMLElement {
           justify-content: center;
           align-items: center;
           width: 100%;
-          height: 100%;
+          height: calc(100% - 40px);
+        }
+        #finalResultContainer {
+          text-align: center;
+          font-size: 18px;
+          font-weight: bold;
+          padding: 10px;
+          background: #f0f0f0;
+          border-top: 1px solid #ccc;
         }
         canvas {
           border: 1px solid black;
@@ -111,7 +119,7 @@ class CoinsApp extends HTMLElement {
         #ldPanelWrapper {
           position: absolute;
           top: 10px;
-          right: 220px;
+          right: 110px;
           z-index: 9999;
           background: rgba(255, 255, 255, 0.95);
           padding: 10px;
@@ -130,6 +138,7 @@ class CoinsApp extends HTMLElement {
       <div id="canvas-container">
         <canvas id="canvas" width="600" height="300"></canvas>
       </div>
+      <div id="finalResultContainer">解の格子の個数 = -</div>
 
       <!-- Main Control Panel -->
       <div id="mainPanelWrapper">
@@ -214,6 +223,11 @@ class CoinsApp extends HTMLElement {
         <button id="toggleLd">L_d</button>
         <div id="ldContent">
           <div id="lowerDResult" style="margin-top: 10px; font-weight: bold"></div>
+          <div id="lowerHdResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="lowerhdResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="lowerPdResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="lowerTdResult" style="margin-top: 5px; font-weight: bold"></div>
+          <div id="lowerLdResult" style="margin-top: 5px; font-weight: bold; color: blue;"></div>
         </div>
       </div>
     `;
@@ -575,7 +589,8 @@ class CoinsApp extends HTMLElement {
     ];
     let alpha = null,
       delta = null,
-      xi = null;
+      xi = null,
+      eta = null;
     ctx.fillStyle = "black";
     ctx.font = "12px sans-serif";
 
@@ -639,6 +654,7 @@ class CoinsApp extends HTMLElement {
           (l1.name === "a1" && l2.name === "c0")
         ) {
           label = "η";
+          eta = { x, y };
         }
         if (label) ctx.fillText(label, px + 10, py - 10);
       }
@@ -734,12 +750,83 @@ class CoinsApp extends HTMLElement {
       }
 
       const lowerDEl = shadow.getElementById("lowerDResult");
+      const lowerHdEl = shadow.getElementById("lowerHdResult");
+      const lowerhdEl = shadow.getElementById("lowerhdResult");
+      const lowerPdEl = shadow.getElementById("lowerPdResult");
+      const lowerTdEl = shadow.getElementById("lowerTdResult");
+      const lowerLdEl = shadow.getElementById("lowerLdResult");
       if (lowerDEl) {
-        const val = Math.max(
-          -1,
-          Math.floor((this.params.X - this.params.C + 1) / 2) - 1
-        );
-        lowerDEl.textContent = `d=${val}`;
+        let dText = "d= -";
+        let hdText = "H_d= -";
+        let lowerhdText = "h_d= -";
+        let lowerPdText = "P_d= -";
+        let lowerTdText = "T_d= -";
+        let lowerLdText = "L_d= -";
+        if (eta) {
+          const val = Math.min(
+            5 * this.params.A + this.params.B,
+            Math.max(-1, Math.floor(eta.x + 0.5) - 1)
+          );
+          dText = `d=${val}`;
+
+          const H_d = Math.min(this.params.A, Math.floor(val / 5));
+          hdText = `H_d=${H_d}`;
+
+          if (alpha) {
+            const h_d = Math.max(0, Math.floor((val - alpha.x + 5) / 5));
+            lowerhdText = `h_d=${h_d}`;
+
+            const P_d = Math.round((alpha.x + 1) * (H_d + 1));
+            lowerPdText = `P_d=${P_d}`;
+
+            const T_d = Math.round(
+              ((H_d - h_d + 1) * (5 * (H_d + h_d) - 2 * (val - alpha.x))) / 2
+            );
+            lowerTdText = `T_d=${T_d}`;
+
+            const L_d = P_d - T_d;
+            lowerLdText = `L_d=${L_d}`;
+          }
+        }
+        lowerDEl.textContent = dText;
+        if (lowerHdEl) lowerHdEl.textContent = hdText;
+        if (lowerhdEl) lowerhdEl.textContent = lowerhdText;
+        if (lowerPdEl) lowerPdEl.textContent = lowerPdText;
+        if (lowerTdEl) lowerTdEl.textContent = lowerTdText;
+        if (lowerLdEl) lowerLdEl.textContent = lowerLdText;
+      }
+
+      // Final Result
+      const finalResultEl = shadow.getElementById("finalResultContainer");
+      if (finalResultEl) {
+        let finalText = "解の格子の個数 = -";
+        let LD_val = null;
+        let Ld_val = null;
+
+        // Re-calculate LD_val (Upper)
+        if (PD_val !== null && TD_val !== null) {
+          LD_val = PD_val - TD_val;
+        }
+
+        // Re-calculate Ld_val (Lower)
+        if (eta && alpha) {
+          const val = Math.min(
+            5 * this.params.A + this.params.B,
+            Math.max(-1, Math.floor(eta.x + 0.5) - 1)
+          );
+          const H_d = Math.min(this.params.A, Math.floor(val / 5));
+          const h_d = Math.max(0, Math.floor((val - alpha.x + 5) / 5));
+          const P_d = Math.round((alpha.x + 1) * (H_d + 1));
+          const T_d = Math.round(
+            ((H_d - h_d + 1) * (5 * (H_d + h_d) - 2 * (val - alpha.x))) / 2
+          );
+          Ld_val = P_d - T_d;
+        }
+
+        if (LD_val !== null && Ld_val !== null) {
+          finalText = `解の格子の個数 = ${LD_val - Ld_val}`;
+        }
+        finalResultEl.textContent = finalText;
       }
     }
   }
