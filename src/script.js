@@ -243,10 +243,14 @@ class CoinsApp extends HTMLElement {
   }
 
   setupEventListeners() {
-    const shadow = this.shadowRoot;
+    this.setupCanvasEvents();
+    this.setupUIEvents();
+    this.setupInputBindings();
+  }
+
+  setupCanvasEvents() {
     const canvas = this.canvas;
 
-    // --- Canvas Events ---
     canvas.addEventListener("mousedown", (e) => {
       this.isDragging = true;
       this.startX = e.clientX;
@@ -285,8 +289,10 @@ class CoinsApp extends HTMLElement {
       this.updateInputs();
       this.draw();
     });
+  }
 
-    // --- Panel Events ---
+  setupUIEvents() {
+    const shadow = this.shadowRoot;
 
     // Toggle GUI
     shadow.getElementById("toggleGui").addEventListener("click", () => {
@@ -308,6 +314,10 @@ class CoinsApp extends HTMLElement {
       content.style.display =
         content.style.display === "none" ? "block" : "none";
     });
+  }
+
+  setupInputBindings() {
+    const shadow = this.shadowRoot;
 
     // Bind Sliders & Numbers
     const bindSliderNumber = (rangeId, numId, param) => {
