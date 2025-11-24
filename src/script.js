@@ -445,23 +445,87 @@ class CoinsApp extends HTMLElement {
 
   draw() {
     if (!this.ctx) return;
+
+    const ctx = this.ctx;
     const { width, height } = this.canvas;
-    this.ctx.clearRect(0, 0, width, height);
+
+    // --- 1. Canvasクリア ---
+    ctx.clearRect(0, 0, width, height);
+
+    // --- 2. グリッド・軸 ---
     this.drawGrid();
     this.drawAxes();
-    this.drawLinearFunction(0, 0, "red"); // y = 0
-    if (this.params.showA) this.drawLinearFunction(0, this.params.A, "orange"); // y = A
 
-    const slope = 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
-    if (this.params.showB)
-      this.drawLinearFunction(slope, -this.params.B * slope, "green"); // y = (x - B)/5
+    // --- 3. 描画する線を配列で宣言 ---
+    const K = CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
+    const lines = [
+      {
+        type: "y",
+        m: 0,
+        c: 0,
+        color: "red",
+        show: true,
+        name: "a0",
+      },
+      {
+        type: "y",
+        m: 0,
+        c: this.params.A,
+        color: "orange",
+        show: this.params.showA,
+        name: "a1",
+      },
+      {
+        type: "y",
+        m: 1 / K,
+        c: -this.params.B / K,
+        color: "green",
+        show: this.params.showB,
+        name: "b0",
+      },
+      {
+        type: "y",
+        m: 1 / K,
+        c: 0,
+        color: "blue",
+        show: true,
+        name: "b1",
+      },
+      {
+        type: "x",
+        x: (this.params.X - this.params.C) / 2,
+        color: "purple",
+        show: this.params.showC,
+        name: "c0",
+      },
+      {
+        type: "x",
+        x: this.params.X / 2,
+        color: "magenta",
+        show: this.params.showC1,
+        name: "c1",
+      },
+    ];
 
-    this.drawLinearFunction(slope, 0, "blue"); // y = x/5
+    lines
+      .filter((l) => l.show)
+      .forEach((l) => {
+        if (l.type === "y") this.drawLinearFunction(l.m, l.c, l.color);
+        else if (l.type === "x") this.drawVerticalLine(l.x, l.color);
+      });
 
-    if (this.params.showC)
-      this.drawVerticalLine((this.params.X - this.params.C) / 2, "purple");
-    if (this.params.showC1) this.drawVerticalLine(this.params.X / 2, "magenta");
-    this.drawIntersections();
+    // --- 4. 交点を取得・描画 ---
+    const { points } = this.calculateIntersections(lines);
+    this.drawIntersectionPoints(points);
+
+    // --- 5. 動的要素（H_D、β、δ） ---
+    const metrics = this.calculateMetrics(points);
+    this.drawDynamicElements(metrics);
+
+    ctx.fillStyle = "black"; // 後続描画用に色を戻す
+
+    // --- 6. 結果パネル更新 ---
+    this.updateResultPanel(metrics);
   }
 
   drawGrid() {
@@ -634,23 +698,6 @@ class CoinsApp extends HTMLElement {
     ctx.moveTo(px, 0);
     ctx.lineTo(px, height);
     ctx.stroke();
-  }
-
-  drawIntersections() {
-    // Calculate intersections
-    const { points, lines } = this.calculateIntersections();
-
-    // Calculate metrics (values and dynamic points)
-    const metrics = this.calculateMetrics(points);
-
-    // Draw static intersections
-    this.drawIntersectionPoints(points);
-
-    // Draw dynamic elements (H_D line, beta, delta)
-    this.drawDynamicElements(metrics);
-
-    // Update DOM results
-    this.updateResultPanel(metrics);
   }
 
   calculateMetrics(points) {
@@ -838,9 +885,7 @@ class CoinsApp extends HTMLElement {
     );
   }
 
-  calculateIntersections() {
-    const lines = this.getLines();
-
+  calculateIntersections(lines) {
     const points = {
       alpha: null,
       delta: null, // Will be calculated in updateResults if needed (beta/delta logic)
@@ -918,47 +963,6 @@ class CoinsApp extends HTMLElement {
           py - CoinsApp.CONSTANTS.LABEL_OFFSET
         );
     });
-  }
-  getLines() {
-    return [
-      { type: "y", f: (x) => 0, show: true, name: "a0", m: 0, c: 0 },
-      {
-        type: "y",
-        f: (x) => this.params.A,
-        show: this.params.showA,
-        name: "a1",
-        m: 0,
-        c: this.params.A,
-      },
-      {
-        type: "y",
-        f: (x) => (x - this.params.B) / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        show: this.params.showB,
-        name: "b0",
-        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        c: -this.params.B / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-      },
-      {
-        type: "y",
-        f: (x) => x / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        show: true,
-        name: "b1",
-        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        c: 0,
-      },
-      {
-        type: "x",
-        x: (this.params.X - this.params.C) / 2,
-        show: this.params.showC,
-        name: "c0",
-      },
-      {
-        type: "x",
-        x: this.params.X / 2,
-        show: this.params.showC1,
-        name: "c1",
-      },
-    ];
   }
 }
 
