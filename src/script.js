@@ -332,73 +332,80 @@ class CoinsApp extends HTMLElement {
   setupInputBindings() {
     const shadow = this.shadowRoot;
 
-    // Bind Sliders & Numbers
-    const bindSliderNumber = (rangeId, numId, param) => {
+    // 1. Slider & Number pairs
+    const paramBindings = [
+      { param: "A", rangeId: "rangeA", numId: "numA" },
+      { param: "B", rangeId: "rangeB", numId: "numB" },
+      { param: "C", rangeId: "rangeC", numId: "numC" },
+      { param: "X", rangeId: "rangeX", numId: "numX" },
+    ];
+
+    paramBindings.forEach(({ param, rangeId, numId }) => {
       const range = shadow.getElementById(rangeId);
       const num = shadow.getElementById(numId);
 
-      range.addEventListener("input", (e) => {
-        const val = Number(e.target.value);
-        this.params[param] = val;
-        num.value = val;
+      const update = (val) => {
+        this.params[param] = Number(val);
+        if (range) range.value = val;
+        if (num) num.value = val;
         this.draw();
-      });
-      num.addEventListener("input", (e) => {
-        const val = Number(e.target.value);
-        this.params[param] = val;
-        range.value = val;
-        this.draw();
-      });
-    };
+      };
 
-    bindSliderNumber("rangeA", "numA", "A");
-    bindSliderNumber("rangeB", "numB", "B");
-    bindSliderNumber("rangeC", "numC", "C");
-    bindSliderNumber("rangeX", "numX", "X");
-
-    // Checkboxes
-    shadow.getElementById("chkA").addEventListener("change", (e) => {
-      this.params.showA = e.target.checked;
-      this.draw();
-    });
-    shadow.getElementById("chkB").addEventListener("change", (e) => {
-      this.params.showB = e.target.checked;
-      this.draw();
-    });
-    shadow.getElementById("chkC").addEventListener("change", (e) => {
-      this.params.showC = e.target.checked;
-      this.draw();
-    });
-    shadow.getElementById("chkX").addEventListener("change", (e) => {
-      this.params.showC1 = e.target.checked;
-      this.draw();
+      if (range) range.addEventListener("input", (e) => update(e.target.value));
+      if (num) num.addEventListener("input", (e) => update(e.target.value));
     });
 
-    // Other Inputs
-    const inputHandlers = {
-      zoomInput: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return;
-        this.zoom = n / 100;
-        this.params.zoomPercent = n;
+    // 2. Checkboxes
+    const checkBindings = [
+      { param: "showA", id: "chkA" },
+      { param: "showB", id: "chkB" },
+      { param: "showC", id: "chkC" },
+      { param: "showC1", id: "chkX" },
+    ];
+
+    checkBindings.forEach(({ param, id }) => {
+      const el = shadow.getElementById(id);
+      if (el) {
+        el.addEventListener("change", (e) => {
+          this.params[param] = e.target.checked;
+          this.draw();
+        });
+      }
+    });
+
+    // 3. Other Inputs
+    const otherBindings = [
+      {
+        id: "zoomInput",
+        handler: (v) => {
+          const n = Number(v);
+          if (Number.isFinite(n)) {
+            this.zoom = n / 100;
+            this.params.zoomPercent = n;
+          }
+        },
       },
-      offsetXInput: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return;
-        this.params.offsetX = n;
+      {
+        id: "offsetXInput",
+        handler: (v) => {
+          const n = Number(v);
+          if (Number.isFinite(n)) this.params.offsetX = n;
+        },
       },
-      offsetYInput: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return;
-        this.params.offsetY = n;
+      {
+        id: "offsetYInput",
+        handler: (v) => {
+          const n = Number(v);
+          if (Number.isFinite(n)) this.params.offsetY = n;
+        },
       },
-    };
+    ];
 
-    Object.keys(inputHandlers).forEach((id) => {
+    otherBindings.forEach(({ id, handler }) => {
       const el = shadow.getElementById(id);
       if (el) {
         el.addEventListener("input", (e) => {
-          inputHandlers[id](e.target.value);
+          handler(e.target.value);
           this.draw();
         });
       }
@@ -409,36 +416,46 @@ class CoinsApp extends HTMLElement {
     const shadow = this.shadowRoot;
     if (!shadow) return;
 
-    const zoomInput = shadow.getElementById("zoomInput");
-    const offsetXInput = shadow.getElementById("offsetXInput");
-    const offsetYInput = shadow.getElementById("offsetYInput");
+    // 1. Simple Value Inputs
+    const valueInputs = [
+      { id: "zoomInput", val: this.params.zoomPercent },
+      { id: "offsetXInput", val: Math.round(this.params.offsetX) },
+      { id: "offsetYInput", val: Math.round(this.params.offsetY) },
+    ];
 
-    if (zoomInput) zoomInput.value = this.params.zoomPercent;
-    if (offsetXInput) offsetXInput.value = Math.round(this.params.offsetX);
-    if (offsetYInput) offsetYInput.value = Math.round(this.params.offsetY);
-
-    const updateField = (id, val) => {
+    valueInputs.forEach(({ id, val }) => {
       const el = shadow.getElementById(id);
       if (el) el.value = val;
-    };
+    });
 
-    updateField("rangeA", this.params.A);
-    updateField("numA", this.params.A);
-    updateField("rangeB", this.params.B);
-    updateField("numB", this.params.B);
-    updateField("rangeC", this.params.C);
-    updateField("numC", this.params.C);
-    updateField("rangeX", this.params.X);
-    updateField("numX", this.params.X);
+    // 2. Param Inputs (Range & Number)
+    const paramInputs = [
+      { param: "A", ids: ["rangeA", "numA"] },
+      { param: "B", ids: ["rangeB", "numB"] },
+      { param: "C", ids: ["rangeC", "numC"] },
+      { param: "X", ids: ["rangeX", "numX"] },
+    ];
 
-    const updateCheck = (id, val) => {
+    paramInputs.forEach(({ param, ids }) => {
+      const val = this.params[param];
+      ids.forEach((id) => {
+        const el = shadow.getElementById(id);
+        if (el) el.value = val;
+      });
+    });
+
+    // 3. Checkboxes
+    const checkInputs = [
+      { param: "showA", id: "chkA" },
+      { param: "showB", id: "chkB" },
+      { param: "showC", id: "chkC" },
+      { param: "showC1", id: "chkX" },
+    ];
+
+    checkInputs.forEach(({ param, id }) => {
       const el = shadow.getElementById(id);
-      if (el) el.checked = val;
-    };
-    updateCheck("chkA", this.params.showA);
-    updateCheck("chkB", this.params.showB);
-    updateCheck("chkC", this.params.showC);
-    updateCheck("chkX", this.params.showC1);
+      if (el) el.checked = this.params[param];
+    });
   }
 
   // --- Drawing Logic ---
@@ -839,42 +856,27 @@ class CoinsApp extends HTMLElement {
       if (el) el.textContent = text;
     };
 
-    // Upper Panel
-    setText("dResult", metrics.D !== null ? `D=${metrics.D}` : "D= -");
-    setText("hDResult", metrics.h_D !== null ? `h_D=${metrics.h_D}` : "h_D= -");
-    setText("HDResult", metrics.H_D !== null ? `H_D=${metrics.H_D}` : "H_D= -");
-    setText(
-      "calcResult",
-      metrics.P_D !== null ? `P_D=${metrics.P_D}` : "P_D= -"
-    );
-    setText(
-      "trapezoidResult",
-      metrics.T_D !== null ? `T_D=${metrics.T_D}` : "T_D= -"
-    );
-    setText("ldResult", metrics.L_D !== null ? `L_D=${metrics.L_D}` : "L_D= -");
+    const resultMappings = [
+      // Upper Panel
+      { id: "dResult", key: "D", prefix: "D=" },
+      { id: "hDResult", key: "h_D", prefix: "h_D=" },
+      { id: "HDResult", key: "H_D", prefix: "H_D=" },
+      { id: "calcResult", key: "P_D", prefix: "P_D=" },
+      { id: "trapezoidResult", key: "T_D", prefix: "T_D=" },
+      { id: "ldResult", key: "L_D", prefix: "L_D=" },
+      // Lower Panel
+      { id: "lowerDResult", key: "d", prefix: "d=" },
+      { id: "lowerHdResult", key: "H_d", prefix: "H_d=" },
+      { id: "lowerhdResult", key: "h_d", prefix: "h_d=" },
+      { id: "lowerPdResult", key: "P_d", prefix: "P_d=" },
+      { id: "lowerTdResult", key: "T_d", prefix: "T_d=" },
+      { id: "lowerLdResult", key: "L_d", prefix: "L_d=" },
+    ];
 
-    // Lower Panel
-    setText("lowerDResult", metrics.d !== null ? `d=${metrics.d}` : "d= -");
-    setText(
-      "lowerHdResult",
-      metrics.H_d !== null ? `H_d=${metrics.H_d}` : "H_d= -"
-    );
-    setText(
-      "lowerhdResult",
-      metrics.h_d !== null ? `h_d=${metrics.h_d}` : "h_d= -"
-    );
-    setText(
-      "lowerPdResult",
-      metrics.P_d !== null ? `P_d=${metrics.P_d}` : "P_d= -"
-    );
-    setText(
-      "lowerTdResult",
-      metrics.T_d !== null ? `T_d=${metrics.T_d}` : "T_d= -"
-    );
-    setText(
-      "lowerLdResult",
-      metrics.L_d !== null ? `L_d=${metrics.L_d}` : "L_d= -"
-    );
+    resultMappings.forEach(({ id, key, prefix }) => {
+      const val = metrics[key];
+      setText(id, val !== null ? `${prefix}${val}` : `${prefix} -`);
+    });
 
     // Final Result
     setText(
