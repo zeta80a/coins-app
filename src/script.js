@@ -30,6 +30,16 @@ class CoinsApp extends HTMLElement {
     this.startY = 0;
     this.startOffsetX = 0;
     this.startOffsetY = 0;
+
+    // Panel Dragging state
+    this.panelDragState = {
+      isDragging: false,
+      element: null,
+      startX: 0,
+      startY: 0,
+      startLeft: 0,
+      startTop: 0,
+    };
   }
 
   static get CONSTANTS() {
@@ -58,7 +68,7 @@ class CoinsApp extends HTMLElement {
       <div id="canvas-container">
         <canvas id="canvas" width="600" height="300"></canvas>
       </div>
-      <div id="finalResultContainer">解の格子の個数 = -</div>
+      <div id="finalResultContainer">解の格子点の個数 = -</div>
 
       <!-- Main Control Panel -->
       <div id="mainPanelWrapper">
@@ -157,6 +167,65 @@ class CoinsApp extends HTMLElement {
     this.setupCanvasEvents();
     this.setupUIEvents();
     this.setupInputBindings();
+    this.setupPanelDragEvents();
+  }
+
+  setupPanelDragEvents() {
+    const setupDraggable = (id) => {
+      const panel = this.shadowRoot.getElementById(id);
+      if (!panel) return;
+
+      panel.addEventListener("mousedown", (e) => {
+        // Prevent dragging if clicking on inputs, buttons, or labels
+        if (["INPUT", "BUTTON", "LABEL"].includes(e.target.tagName)) return;
+
+        this.panelDragState.isDragging = true;
+        this.panelDragState.element = panel;
+        this.panelDragState.startX = e.clientX;
+        this.panelDragState.startY = e.clientY;
+
+        const style = window.getComputedStyle(panel);
+
+        // If right is set, switch to left-based positioning to avoid conflict during drag
+        if (style.right !== "auto" && style.left !== "auto") {
+          panel.style.left = style.left;
+          panel.style.right = "auto";
+        }
+
+        this.panelDragState.startLeft = parseInt(style.left, 10) || 0;
+        this.panelDragState.startTop = parseInt(style.top, 10) || 0;
+
+        panel.style.cursor = "grabbing";
+      });
+    };
+
+    // Setup drag for all panels
+    setupDraggable("mainPanelWrapper");
+    setupDraggable("resultPanelWrapper");
+    setupDraggable("ldPanelWrapper");
+
+    // Global mouse events for dragging
+    window.addEventListener("mousemove", (e) => {
+      if (!this.panelDragState.isDragging || !this.panelDragState.element)
+        return;
+
+      const dx = e.clientX - this.panelDragState.startX;
+      const dy = e.clientY - this.panelDragState.startY;
+
+      const panel = this.panelDragState.element;
+      panel.style.left = `${this.panelDragState.startLeft + dx}px`;
+      panel.style.top = `${this.panelDragState.startTop + dy}px`;
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (this.panelDragState.isDragging) {
+        if (this.panelDragState.element) {
+          this.panelDragState.element.style.cursor = "default";
+        }
+        this.panelDragState.isDragging = false;
+        this.panelDragState.element = null;
+      }
+    });
   }
 
   setupCanvasEvents() {
@@ -780,8 +849,8 @@ class CoinsApp extends HTMLElement {
     setText(
       "finalResultContainer",
       metrics.finalResult !== null
-        ? `解の格子の個数 = ${metrics.finalResult}`
-        : "解の格子の個数 = -"
+        ? `解の格子点の個数 = ${metrics.finalResult}`
+        : "解の格子点の個数 = -"
     );
   }
 
