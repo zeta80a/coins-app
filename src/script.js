@@ -1,3 +1,5 @@
+import { styles } from "./styles.js";
+
 // ===============================
 // Web Component: CoinsApp
 // ===============================
@@ -50,111 +52,7 @@ class CoinsApp extends HTMLElement {
 
   render() {
     this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-          position: relative;
-          width: 100%;
-          height: 100vh;
-          overflow: hidden;
-        }
-        /* Canvas Container */
-        #canvas-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          width: 100%;
-          height: calc(100% - 40px);
-        }
-        #finalResultContainer {
-          text-align: center;
-          font-size: 18px;
-          font-weight: bold;
-          padding: 10px;
-          background: #f0f0f0;
-          border-top: 1px solid #ccc;
-        }
-        canvas {
-          border: 1px solid black;
-          cursor: grab;
-          display: block;
-          background: white;
-        }
-
-        /* Panels */
-        #mainPanelWrapper {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          z-index: 9999;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          font-family: sans-serif;
-        }
-        label {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          margin-bottom: 6px;
-        }
-        input[type="number"] {
-          width: 56px;
-        }
-        input[type="checkbox"] {
-          margin-left: 6px;
-        }
-        #guiContent {
-          display: none;
-        }
-        #resultPanelWrapper {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          z-index: 9999;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          font-family: sans-serif;
-          display: block;
-        }
-        #resultContent {
-          display: block;
-        }
-        #ldPanelWrapper {
-          position: absolute;
-          top: 10px;
-          right: 110px;
-          z-index: 9999;
-          background: rgba(255, 255, 255, 0.95);
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          font-family: sans-serif;
-          display: block;
-        }
-        #ldContent {
-          display: block;
-        }
-
-        /* Result Items */
-        .result-row {
-          margin-top: 5px;
-          font-weight: bold;
-        }
-        .result-row-large {
-          margin-top: 10px;
-          font-weight: bold;
-        }
-        .result-highlight {
-          color: blue;
-        }
-      </style>
+      <style>${styles}</style>
 
       <!-- Canvas -->
       <div id="canvas-container">
@@ -332,73 +230,80 @@ class CoinsApp extends HTMLElement {
   setupInputBindings() {
     const shadow = this.shadowRoot;
 
-    // Bind Sliders & Numbers
-    const bindSliderNumber = (rangeId, numId, param) => {
+    // 1. Slider & Number pairs
+    const paramBindings = [
+      { param: "A", rangeId: "rangeA", numId: "numA" },
+      { param: "B", rangeId: "rangeB", numId: "numB" },
+      { param: "C", rangeId: "rangeC", numId: "numC" },
+      { param: "X", rangeId: "rangeX", numId: "numX" },
+    ];
+
+    paramBindings.forEach(({ param, rangeId, numId }) => {
       const range = shadow.getElementById(rangeId);
       const num = shadow.getElementById(numId);
 
-      range.addEventListener("input", (e) => {
-        const val = Number(e.target.value);
-        this.params[param] = val;
-        num.value = val;
+      const update = (val) => {
+        this.params[param] = Number(val);
+        if (range) range.value = val;
+        if (num) num.value = val;
         this.draw();
-      });
-      num.addEventListener("input", (e) => {
-        const val = Number(e.target.value);
-        this.params[param] = val;
-        range.value = val;
-        this.draw();
-      });
-    };
+      };
 
-    bindSliderNumber("rangeA", "numA", "A");
-    bindSliderNumber("rangeB", "numB", "B");
-    bindSliderNumber("rangeC", "numC", "C");
-    bindSliderNumber("rangeX", "numX", "X");
-
-    // Checkboxes
-    shadow.getElementById("chkA").addEventListener("change", (e) => {
-      this.params.showA = e.target.checked;
-      this.draw();
-    });
-    shadow.getElementById("chkB").addEventListener("change", (e) => {
-      this.params.showB = e.target.checked;
-      this.draw();
-    });
-    shadow.getElementById("chkC").addEventListener("change", (e) => {
-      this.params.showC = e.target.checked;
-      this.draw();
-    });
-    shadow.getElementById("chkX").addEventListener("change", (e) => {
-      this.params.showC1 = e.target.checked;
-      this.draw();
+      if (range) range.addEventListener("input", (e) => update(e.target.value));
+      if (num) num.addEventListener("input", (e) => update(e.target.value));
     });
 
-    // Other Inputs
-    const inputHandlers = {
-      zoomInput: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return;
-        this.zoom = n / 100;
-        this.params.zoomPercent = n;
+    // 2. Checkboxes
+    const checkBindings = [
+      { param: "showA", id: "chkA" },
+      { param: "showB", id: "chkB" },
+      { param: "showC", id: "chkC" },
+      { param: "showC1", id: "chkX" },
+    ];
+
+    checkBindings.forEach(({ param, id }) => {
+      const el = shadow.getElementById(id);
+      if (el) {
+        el.addEventListener("change", (e) => {
+          this.params[param] = e.target.checked;
+          this.draw();
+        });
+      }
+    });
+
+    // 3. Other Inputs
+    const otherBindings = [
+      {
+        id: "zoomInput",
+        handler: (v) => {
+          const n = Number(v);
+          if (Number.isFinite(n)) {
+            this.zoom = n / 100;
+            this.params.zoomPercent = n;
+          }
+        },
       },
-      offsetXInput: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return;
-        this.params.offsetX = n;
+      {
+        id: "offsetXInput",
+        handler: (v) => {
+          const n = Number(v);
+          if (Number.isFinite(n)) this.params.offsetX = n;
+        },
       },
-      offsetYInput: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return;
-        this.params.offsetY = n;
+      {
+        id: "offsetYInput",
+        handler: (v) => {
+          const n = Number(v);
+          if (Number.isFinite(n)) this.params.offsetY = n;
+        },
       },
-    };
+    ];
 
-    Object.keys(inputHandlers).forEach((id) => {
+    otherBindings.forEach(({ id, handler }) => {
       const el = shadow.getElementById(id);
       if (el) {
         el.addEventListener("input", (e) => {
-          inputHandlers[id](e.target.value);
+          handler(e.target.value);
           this.draw();
         });
       }
@@ -409,59 +314,133 @@ class CoinsApp extends HTMLElement {
     const shadow = this.shadowRoot;
     if (!shadow) return;
 
-    const zoomInput = shadow.getElementById("zoomInput");
-    const offsetXInput = shadow.getElementById("offsetXInput");
-    const offsetYInput = shadow.getElementById("offsetYInput");
+    // 1. Simple Value Inputs
+    const valueInputs = [
+      { id: "zoomInput", val: this.params.zoomPercent },
+      { id: "offsetXInput", val: Math.round(this.params.offsetX) },
+      { id: "offsetYInput", val: Math.round(this.params.offsetY) },
+    ];
 
-    if (zoomInput) zoomInput.value = this.params.zoomPercent;
-    if (offsetXInput) offsetXInput.value = Math.round(this.params.offsetX);
-    if (offsetYInput) offsetYInput.value = Math.round(this.params.offsetY);
-
-    const updateField = (id, val) => {
+    valueInputs.forEach(({ id, val }) => {
       const el = shadow.getElementById(id);
       if (el) el.value = val;
-    };
+    });
 
-    updateField("rangeA", this.params.A);
-    updateField("numA", this.params.A);
-    updateField("rangeB", this.params.B);
-    updateField("numB", this.params.B);
-    updateField("rangeC", this.params.C);
-    updateField("numC", this.params.C);
-    updateField("rangeX", this.params.X);
-    updateField("numX", this.params.X);
+    // 2. Param Inputs (Range & Number)
+    const paramInputs = [
+      { param: "A", ids: ["rangeA", "numA"] },
+      { param: "B", ids: ["rangeB", "numB"] },
+      { param: "C", ids: ["rangeC", "numC"] },
+      { param: "X", ids: ["rangeX", "numX"] },
+    ];
 
-    const updateCheck = (id, val) => {
+    paramInputs.forEach(({ param, ids }) => {
+      const val = this.params[param];
+      ids.forEach((id) => {
+        const el = shadow.getElementById(id);
+        if (el) el.value = val;
+      });
+    });
+
+    // 3. Checkboxes
+    const checkInputs = [
+      { param: "showA", id: "chkA" },
+      { param: "showB", id: "chkB" },
+      { param: "showC", id: "chkC" },
+      { param: "showC1", id: "chkX" },
+    ];
+
+    checkInputs.forEach(({ param, id }) => {
       const el = shadow.getElementById(id);
-      if (el) el.checked = val;
-    };
-    updateCheck("chkA", this.params.showA);
-    updateCheck("chkB", this.params.showB);
-    updateCheck("chkC", this.params.showC);
-    updateCheck("chkX", this.params.showC1);
+      if (el) el.checked = this.params[param];
+    });
   }
 
   // --- Drawing Logic ---
 
   draw() {
     if (!this.ctx) return;
+
+    const ctx = this.ctx;
     const { width, height } = this.canvas;
-    this.ctx.clearRect(0, 0, width, height);
+
+    // --- 1. Canvasクリア ---
+    ctx.clearRect(0, 0, width, height);
+
+    // --- 2. グリッド・軸 ---
     this.drawGrid();
     this.drawAxes();
-    this.drawLinearFunction(0, 0, "red"); // y = 0
-    if (this.params.showA) this.drawLinearFunction(0, this.params.A, "orange"); // y = A
 
-    const slope = 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
-    if (this.params.showB)
-      this.drawLinearFunction(slope, -this.params.B * slope, "green"); // y = (x - B)/5
+    // --- 3. 描画する線を配列で宣言 ---
+    const K = CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
+    const lines = [
+      {
+        type: "y",
+        m: 0,
+        c: 0,
+        color: "red",
+        show: true,
+        name: "a0",
+      },
+      {
+        type: "y",
+        m: 0,
+        c: this.params.A,
+        color: "orange",
+        show: this.params.showA,
+        name: "a1",
+      },
+      {
+        type: "y",
+        m: 1 / K,
+        c: -this.params.B / K,
+        color: "green",
+        show: this.params.showB,
+        name: "b0",
+      },
+      {
+        type: "y",
+        m: 1 / K,
+        c: 0,
+        color: "blue",
+        show: true,
+        name: "b1",
+      },
+      {
+        type: "x",
+        x: (this.params.X - this.params.C) / 2,
+        color: "purple",
+        show: this.params.showC,
+        name: "c0",
+      },
+      {
+        type: "x",
+        x: this.params.X / 2,
+        color: "magenta",
+        show: this.params.showC1,
+        name: "c1",
+      },
+    ];
 
-    this.drawLinearFunction(slope, 0, "blue"); // y = x/5
+    lines
+      .filter((l) => l.show)
+      .forEach((l) => {
+        if (l.type === "y") this.drawLinearFunction(l.m, l.c, l.color);
+        else if (l.type === "x") this.drawVerticalLine(l.x, l.color);
+      });
 
-    if (this.params.showC)
-      this.drawVerticalLine((this.params.X - this.params.C) / 2, "purple");
-    if (this.params.showC1) this.drawVerticalLine(this.params.X / 2, "magenta");
-    this.drawIntersections();
+    // --- 4. 交点を取得・描画 ---
+    const { points } = this.calculateIntersections(lines);
+    this.drawIntersectionPoints(points);
+
+    // --- 5. 動的要素（H_D、β、δ） ---
+    const metrics = this.calculateMetrics(points);
+    this.drawDynamicElements(metrics);
+
+    ctx.fillStyle = "black"; // 後続描画用に色を戻す
+
+    // --- 6. 結果パネル更新 ---
+    this.updateResultPanel(metrics);
   }
 
   drawGrid() {
@@ -636,23 +615,6 @@ class CoinsApp extends HTMLElement {
     ctx.stroke();
   }
 
-  drawIntersections() {
-    // Calculate intersections
-    const { points, lines } = this.calculateIntersections();
-
-    // Calculate metrics (values and dynamic points)
-    const metrics = this.calculateMetrics(points);
-
-    // Draw static intersections
-    this.drawIntersectionPoints(points);
-
-    // Draw dynamic elements (H_D line, beta, delta)
-    this.drawDynamicElements(metrics);
-
-    // Update DOM results
-    this.updateResultPanel(metrics);
-  }
-
   calculateMetrics(points) {
     const { alpha, xi, eta } = points;
     const K = CoinsApp.CONSTANTS.SLOPE_DENOMINATOR;
@@ -792,42 +754,27 @@ class CoinsApp extends HTMLElement {
       if (el) el.textContent = text;
     };
 
-    // Upper Panel
-    setText("dResult", metrics.D !== null ? `D=${metrics.D}` : "D= -");
-    setText("hDResult", metrics.h_D !== null ? `h_D=${metrics.h_D}` : "h_D= -");
-    setText("HDResult", metrics.H_D !== null ? `H_D=${metrics.H_D}` : "H_D= -");
-    setText(
-      "calcResult",
-      metrics.P_D !== null ? `P_D=${metrics.P_D}` : "P_D= -"
-    );
-    setText(
-      "trapezoidResult",
-      metrics.T_D !== null ? `T_D=${metrics.T_D}` : "T_D= -"
-    );
-    setText("ldResult", metrics.L_D !== null ? `L_D=${metrics.L_D}` : "L_D= -");
+    const resultMappings = [
+      // Upper Panel
+      { id: "dResult", key: "D", prefix: "D=" },
+      { id: "hDResult", key: "h_D", prefix: "h_D=" },
+      { id: "HDResult", key: "H_D", prefix: "H_D=" },
+      { id: "calcResult", key: "P_D", prefix: "P_D=" },
+      { id: "trapezoidResult", key: "T_D", prefix: "T_D=" },
+      { id: "ldResult", key: "L_D", prefix: "L_D=" },
+      // Lower Panel
+      { id: "lowerDResult", key: "d", prefix: "d=" },
+      { id: "lowerHdResult", key: "H_d", prefix: "H_d=" },
+      { id: "lowerhdResult", key: "h_d", prefix: "h_d=" },
+      { id: "lowerPdResult", key: "P_d", prefix: "P_d=" },
+      { id: "lowerTdResult", key: "T_d", prefix: "T_d=" },
+      { id: "lowerLdResult", key: "L_d", prefix: "L_d=" },
+    ];
 
-    // Lower Panel
-    setText("lowerDResult", metrics.d !== null ? `d=${metrics.d}` : "d= -");
-    setText(
-      "lowerHdResult",
-      metrics.H_d !== null ? `H_d=${metrics.H_d}` : "H_d= -"
-    );
-    setText(
-      "lowerhdResult",
-      metrics.h_d !== null ? `h_d=${metrics.h_d}` : "h_d= -"
-    );
-    setText(
-      "lowerPdResult",
-      metrics.P_d !== null ? `P_d=${metrics.P_d}` : "P_d= -"
-    );
-    setText(
-      "lowerTdResult",
-      metrics.T_d !== null ? `T_d=${metrics.T_d}` : "T_d= -"
-    );
-    setText(
-      "lowerLdResult",
-      metrics.L_d !== null ? `L_d=${metrics.L_d}` : "L_d= -"
-    );
+    resultMappings.forEach(({ id, key, prefix }) => {
+      const val = metrics[key];
+      setText(id, val !== null ? `${prefix}${val}` : `${prefix} -`);
+    });
 
     // Final Result
     setText(
@@ -838,9 +785,7 @@ class CoinsApp extends HTMLElement {
     );
   }
 
-  calculateIntersections() {
-    const lines = this.getLines();
-
+  calculateIntersections(lines) {
     const points = {
       alpha: null,
       delta: null, // Will be calculated in updateResults if needed (beta/delta logic)
@@ -918,47 +863,6 @@ class CoinsApp extends HTMLElement {
           py - CoinsApp.CONSTANTS.LABEL_OFFSET
         );
     });
-  }
-  getLines() {
-    return [
-      { type: "y", f: (x) => 0, show: true, name: "a0", m: 0, c: 0 },
-      {
-        type: "y",
-        f: (x) => this.params.A,
-        show: this.params.showA,
-        name: "a1",
-        m: 0,
-        c: this.params.A,
-      },
-      {
-        type: "y",
-        f: (x) => (x - this.params.B) / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        show: this.params.showB,
-        name: "b0",
-        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        c: -this.params.B / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-      },
-      {
-        type: "y",
-        f: (x) => x / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        show: true,
-        name: "b1",
-        m: 1 / CoinsApp.CONSTANTS.SLOPE_DENOMINATOR,
-        c: 0,
-      },
-      {
-        type: "x",
-        x: (this.params.X - this.params.C) / 2,
-        show: this.params.showC,
-        name: "c0",
-      },
-      {
-        type: "x",
-        x: this.params.X / 2,
-        show: this.params.showC1,
-        name: "c1",
-      },
-    ];
   }
 }
 
