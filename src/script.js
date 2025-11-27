@@ -40,6 +40,9 @@ class CoinsApp extends HTMLElement {
       startLeft: 0,
       startTop: 0,
     };
+
+    // Initialize from Query Params
+    this.loadParamsFromQuery();
   }
 
   static get CONSTANTS() {
@@ -422,6 +425,20 @@ class CoinsApp extends HTMLElement {
     checkInputs.forEach(({ param, id }) => {
       const el = shadow.getElementById(id);
       if (el) el.checked = this.params[param];
+    });
+  }
+
+  loadParamsFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const keys = ["A", "B", "C", "X"];
+
+    keys.forEach((key) => {
+      if (params.has(key)) {
+        const val = parseInt(params.get(key), 10);
+        if (!isNaN(val)) {
+          this.params[key] = val;
+        }
+      }
     });
   }
 
