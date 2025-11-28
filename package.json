@@ -12,5 +12,13 @@
   "license": "ISC",
   "devDependencies": {
     "parcel": "^2.16.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "lmdb",
+      "msgpackr-extract"
+    ]
   }
 }
